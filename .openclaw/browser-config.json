@@ -1,0 +1,28 @@
+{
+  "browser": {
+    "evaluateEnabled": false,
+    "profiles": {
+      "xiaohongshu-chrome": {
+        "type": "chrome-extension-relay",
+        "description": "使用已登录的Chrome浏览器",
+        "defaultUrl": "https://www.xiaohongshu.com"
+      },
+      "xiaohongshu-isolated": {
+        "type": "openclaw-managed",
+        "userDataDir": "~/.openclaw/browser-profiles/xiaohongshu",
+        "description": "隔离的自动化浏览器",
+        "options": {
+          "headless": false,
+          "args": [
+            "--disable-blink-features=AutomationControlled",
+            "--user-agent=Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
+          ]
+        }
+      }
+    }
+  },
+  "tools": {
+    "allow": ["browser", "web_fetch"],
+    "deny": []
+  }
+}
