@@ -17,10 +17,10 @@ const https = require('https');
 // ======================================
 
 const API_CONFIG = {
-  // TODO: 部署后替换为你的Vercel URL
-  url: process.env.JARVISMOLT_API_URL || 'https://jarvismolt-api.vercel.app/api/verify',
-  // TODO: 替换为你的API密钥
-  apiKey: process.env.JARVISMOLT_API_KEY || 'sk-jarvismolt-2026-default'
+  // 阿里云函数计算 - Verify API
+  url: process.env.JARVISMOLT_API_URL || 'https://verify-ffigtcrsdv.cn-shanghai.fcapp.run',
+  // API密钥
+  apiKey: process.env.JARVISMOLT_API_KEY || 'sk-jarvismolt-2026-1367b8bbeac1803e'
 };
 
 // ======================================
