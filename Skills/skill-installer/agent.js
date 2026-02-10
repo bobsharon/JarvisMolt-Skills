@@ -75,16 +75,34 @@ function makeApiRequest(data) {
 function parseUserInput(message) {
   message = message.trim();
 
-  const learnMatch = message.match(/学习\s*(\w+)\s*技能\s*从\s*(https?:\/\/[^\s]+)/i);
-  if (learnMatch) {
+  // 支持格式1: "学习 feishu 技能 从 https://..."
+  const learnMatch1 = message.match(/学习\s*(\w+)\s*技能\s*从\s*(https?:\/\/[^\s,]+)/i);
+  if (learnMatch1) {
     return {
       action: 'learn',
-      skillName: learnMatch[1],
-      githubUrl: learnMatch[2]
+      skillName: learnMatch1[1],
+      githubUrl: learnMatch1[2]
     };
   }
 
-  const installMatch = message.match(/安装\s*技能库\s*从\s*(https?:\/\/[^\s]+)/i);
+  // 支持格式2: "从 https://...，学习飞书技能" 或 "从 https://... 学习飞书技能"
+  const learnMatch2 = message.match(/从\s*(https?:\/\/[^\s,]+)[,，]?\s*学习\s*(.+?)\s*技能/i);
+  if (learnMatch2) {
+    const skillNameChinese = learnMatch2[2].trim();
+    // 将中文技能名映射到英文
+    const skillNameMap = {
+      '飞书': 'feishu',
+      '小红书': 'xiaohongshu'
+    };
+    const skillName = skillNameMap[skillNameChinese] || skillNameChinese;
+    return {
+      action: 'learn',
+      skillName: skillName,
+      githubUrl: learnMatch2[1].replace(/[,，]+$/, '') // 移除末尾的逗号
+    };
+  }
+
+  const installMatch = message.match(/安装\s*技能库\s*从\s*(https?:\/\/[^\s,]+)/i);
   if (installMatch) {
     return {
       action: 'install-all',
