@@ -19,6 +19,8 @@ const https = require('https');
 const API_CONFIG = {
   // 阿里云函数计算 - Verify API
   url: process.env.JARVISMOLT_API_URL || 'https://verify-ffigtcrsdv.cn-shanghai.fcapp.run',
+  // 阿里云函数计算 - Download API
+  downloadUrl: process.env.JARVISMOLT_DOWNLOAD_URL || 'https://download-vjckfoskbb.cn-shanghai.fcapp.run',
   // API密钥
   apiKey: process.env.JARVISMOLT_API_KEY || 'sk-jarvismolt-2026-1367b8bbeac1803e'
 };
@@ -195,7 +197,8 @@ async function verifyLicenseCode(skillName, code) {
       console.log('✓ 授权验证成功\n');
       return {
         valid: true,
-        license: response.license
+        license: response.license,
+        downloadUrl: response.downloadUrl  // 保存 downloadUrl
       };
     } else {
       return {
@@ -220,27 +223,55 @@ async function verifyLicenseCode(skillName, code) {
   }
 }
 
-async function downloadSkillFromGitHub(githubUrl, skillName) {
-  const tmpDir = path.join(os.tmpdir(), `jarvismolt-${Date.now()}`);
+async function downloadSkillFromAPI(downloadUrl) {
+  const tmpFile = path.join(os.tmpdir(), `skill-${Date.now()}.tar.gz`);
 
-  console.log(`\n📥 正在从GitHub下载技能...`);
-  console.log(`   仓库: ${githubUrl}`);
-  console.log(`   临时目录: ${tmpDir}\n`);
+  console.log(`\n📥 正在下载技能包...`);
+  console.log(`   临时文件: ${tmpFile}\n`);
 
   try {
-    execSync(`git clone "${githubUrl}" "${tmpDir}"`, {
-      stdio: 'inherit'
+    // 构建完整的下载URL - 使用独立的 download API
+    // downloadUrl 格式: /api/download?token=xxx
+    const fullUrl = `${API_CONFIG.downloadUrl}${downloadUrl}`;
+
+    console.log('🌐 正在连接下载服务器...');
+    console.log(`   URL: ${fullUrl.substring(0, 80)}...`);
+
+    execSync(`curl -L -s "${fullUrl}" -o "${tmpFile}"`, {
+      timeout: 60000
     });
 
-    console.log('\n✓ GitHub仓库克隆成功\n');
+    if (!fs.existsSync(tmpFile)) {
+      throw new Error('下载失败: 临时文件不存在');
+    }
 
-    return tmpDir;
+    const stats = fs.statSync(tmpFile);
+    if (stats.size === 0) {
+      throw new Error('下载失败: 文件大小为0');
+    }
+
+    // 检查是否是错误响应（JSON格式）
+    if (stats.size < 1000) {
+      const content = fs.readFileSync(tmpFile, 'utf8');
+      try {
+        const json = JSON.parse(content);
+        if (json.error) {
+          throw new Error(`下载失败: ${json.error}`);
+        }
+      } catch (e) {
+        // 不是JSON，继续
+      }
+    }
+
+    console.log(`✓ 技能包下载成功 (${stats.size} bytes)\n`);
+
+    return tmpFile;
   } catch (error) {
-    throw new Error(`GitHub克隆失败: ${error.message}`);
+    throw new Error(`技能包下载失败: ${error.message}`);
   }
 }
 
-async function installSkill(tmpDir, skillName) {
+async function installSkill(tarGzFile, skillName) {
   const skillsDir = path.join(os.homedir(), '.openclaw', 'skills');
   const targetDir = path.join(skillsDir, skillName);
 
@@ -248,13 +279,8 @@ async function installSkill(tmpDir, skillName) {
     fs.mkdirSync(skillsDir, { recursive: true });
   }
 
-  const skillPath = path.join(tmpDir, 'Skills', skillName);
-  if (!fs.existsSync(skillPath)) {
-    throw new Error(`技能目录不存在: Skills/${skillName}`);
-  }
-
   console.log(`\n📦 正在安装技能...`);
-  console.log(`   源目录: ${skillPath}`);
+  console.log(`   源文件: ${tarGzFile}`);
   console.log(`   目标目录: ${targetDir}\n`);
 
   if (fs.existsSync(targetDir)) {
@@ -262,7 +288,14 @@ async function installSkill(tmpDir, skillName) {
     execSync(`rm -rf "${targetDir}"`);
   }
 
-  execSync(`cp -r "${skillPath}" "${targetDir}"`);
+  // 解压 tar.gz 到目标目录
+  try {
+    execSync(`mkdir -p "${targetDir}" && tar -xzf "${tarGzFile}" -C "${targetDir}"`, {
+      stdio: 'inherit'
+    });
+  } catch (error) {
+    throw new Error(`解压技能包失败: ${error.message}`);
+  }
 
   const packageJson = path.join(targetDir, 'package.json');
   if (fs.existsSync(packageJson)) {
@@ -276,7 +309,7 @@ async function installSkill(tmpDir, skillName) {
   console.log('\n✓ 技能安装完成\n');
 
   try {
-    execSync(`rm -rf "${tmpDir}"`);
+    execSync(`rm -f "${tarGzFile}"`);
     console.log('✓ 临时文件已清理\n');
   } catch (error) {
     console.warn(`⚠️  清理临时文件失败: ${error.message}`);
@@ -317,14 +350,20 @@ function listAuthorizedSkills() {
 // ======================================
 
 async function skillInstallerAgent(context) {
-  const { message, tools } = context;
+  const { message, tools, previousContext } = context;
 
   console.log('\n╔═══════════════════════════════════════════════════╗');
   console.log('║     Skill Installer - JarvisMolt技能安装器        ║');
   console.log('║            (在线API验证版本)                       ║');
   console.log('╚═══════════════════════════════════════════════════╝\n');
 
-  const parsed = parseUserInput(message);
+  // 如果有 previousContext，说明是多轮对话的后续步骤
+  let parsed;
+  if (previousContext && previousContext.action) {
+    parsed = previousContext;
+  } else {
+    parsed = parseUserInput(message);
+  }
 
   try {
     switch (parsed.action) {
@@ -365,11 +404,22 @@ async function skillInstallerAgent(context) {
           };
         }
 
-        console.log('📥 步骤2: 下载技能...');
-        const tmpDir = await downloadSkillFromGitHub(githubUrl, skillName);
+        // 即使有缓存的授权，也需要重新验证以获取临时下载链接
+        console.log('📥 步骤2: 获取下载链接...');
+        const verifyResult = await verifyLicenseCode(skillName, license.code);
 
-        console.log('📦 步骤3: 安装技能...');
-        const targetDir = await installSkill(tmpDir, skillName);
+        if (!verifyResult.valid) {
+          return {
+            response: `❌ 获取下载链接失败\n\n错误: ${verifyResult.error}\n${verifyResult.message || ''}\n\n请重新授权或联系技能提供者。`,
+            success: false
+          };
+        }
+
+        console.log('📥 步骤3: 下载技能包...');
+        const tarGzFile = await downloadSkillFromAPI(verifyResult.downloadUrl);
+
+        console.log('📦 步骤4: 安装技能...');
+        const targetDir = await installSkill(tarGzFile, skillName);
 
         console.log('╔═══════════════════════════════════════════════════╗');
         console.log('║              ✅ 技能学习完成！                     ║');
@@ -390,7 +440,7 @@ async function skillInstallerAgent(context) {
       }
 
       case 'verify-license': {
-        const { skillName, githubUrl } = context.previousContext;
+        const { skillName, githubUrl } = parsed;
         const licenseCode = message.trim();
 
         console.log(`\n🔐 验证授权码: ${licenseCode}`);
@@ -419,8 +469,8 @@ ${result.message || ''}
 
         cacheLicense(skillName, result.license);
 
-        const tmpDir = await downloadSkillFromGitHub(githubUrl, skillName);
-        const targetDir = await installSkill(tmpDir, skillName);
+        const tarGzFile = await downloadSkillFromAPI(result.downloadUrl);
+        const targetDir = await installSkill(tarGzFile, skillName);
 
         return {
           response: `✅ ${skillName}技能学习完成！
