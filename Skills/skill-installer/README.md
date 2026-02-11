@@ -6,7 +6,7 @@
 
 ## 🎯 测试场景
 
-模拟用户在OpenClaw中学习xiaohongshu技能的完整流程。
+模拟用户在OpenClaw中学习lark技能的完整流程。
 
 ---
 
@@ -27,7 +27,7 @@ chmod +x agent.js
 
 ```bash
 # 步骤1：用户输入学习指令
-node agent.js "学习xiaohongshu技能 从 https://github.com/bobsharon/JarvisMolt"
+node agent.js "学习lark技能 从 https://github.com/bobsharon/JarvisMolt"
 
 # 预期输出：
 # 提示输入授权码
@@ -39,7 +39,7 @@ node agent.js "学习xiaohongshu技能 从 https://github.com/bobsharon/JarvisMo
 ║     Skill Installer - JarvisMolt技能安装器        ║
 ╚═══════════════════════════════════════════════════╝
 
-🎯 目标技能: xiaohongshu
+🎯 目标技能: lark
 🔗 GitHub仓库: https://github.com/bobsharon/JarvisMolt
 
 📋 步骤1: 检查授权...
@@ -60,7 +60,7 @@ Agent返回结果:
 ⚠️  需要用户输入
 Context: {
   action: 'verify-license',
-  skillName: 'xiaohongshu',
+  skillName: 'lark',
   githubUrl: 'https://github.com/bobsharon/JarvisMolt'
 }
 ```
@@ -73,7 +73,7 @@ Context: {
 cd ../../scripts
 
 # 生成测试授权码
-node generate-code.js xiaohongshu --type trial --days 7
+node generate-code.js lark --type trial --days 7
 
 # 复制生成的授权码（例如：ABCD3456-789N-PQRS-TUVW-XY）
 ```
@@ -89,9 +89,9 @@ node generate-code.js xiaohongshu --type trial --days 7
 mkdir -p ~/.openclaw/licenses
 
 # 创建授权文件
-cat > ~/.openclaw/licenses/xiaohongshu.json << 'EOF'
+cat > ~/.openclaw/licenses/lark.json << 'EOF'
 {
-  "skill": "xiaohongshu",
+  "skill": "lark",
   "code": "TEST-CODE-FOR-DEMO",
   "activatedAt": 1738743600000,
   "expiresAt": 1770279600000,
@@ -101,7 +101,7 @@ EOF
 
 # 再次运行agent
 cd /Users/bobsharon/myfiles/xlab/JarvisMolt/Skills/skill-installer
-node agent.js "学习xiaohongshu技能 从 https://github.com/bobsharon/JarvisMolt"
+node agent.js "学习lark技能 从 https://github.com/bobsharon/JarvisMolt"
 ```
 
 **预期输出**：
@@ -110,7 +110,7 @@ node agent.js "学习xiaohongshu技能 从 https://github.com/bobsharon/JarvisMo
 ║     Skill Installer - JarvisMolt技能安装器        ║
 ╚═══════════════════════════════════════════════════╝
 
-🎯 目标技能: xiaohongshu
+🎯 目标技能: lark
 🔗 GitHub仓库: https://github.com/bobsharon/JarvisMolt
 
 📋 步骤1: 检查授权...
@@ -124,8 +124,8 @@ Cloning into '/tmp/jarvismolt-1738743600000'...
 ✓ GitHub仓库克隆成功
 
 📦 步骤3: 安装技能...
-   源目录: /tmp/jarvismolt-1738743600000/Skills/xiaohongshu
-   目标目录: ~/.openclaw/skills/xiaohongshu
+   源目录: /tmp/jarvismolt-1738743600000/Skills/lark
+   目标目录: ~/.openclaw/skills/lark
 
 ✓ 技能安装完成
 ✓ 临时文件已清理
@@ -134,15 +134,15 @@ Cloning into '/tmp/jarvismolt-1738743600000'...
 ║              ✅ 技能学习完成！                     ║
 ╚═══════════════════════════════════════════════════╝
 
-✅ xiaohongshu技能学习完成！
+✅ lark技能学习完成！
 
-安装位置: ~/.openclaw/skills/xiaohongshu
+安装位置: ~/.openclaw/skills/lark
 
 现在你可以使用该技能了。例如：
 - 小红书搜索 电商运营
 - 小红书爬取 直播带货 --数量=50
 
-详细文档: ~/.openclaw/skills/xiaohongshu/SKILL.md
+详细文档: ~/.openclaw/skills/lark/SKILL.md
 ```
 
 ---
@@ -160,7 +160,7 @@ node agent.js "查看我的技能授权"
 ┌─────────────┬──────────────────────┬──────────┬──────────────┐
 │ 技能名称     │ 授权类型              │ 剩余天数  │ 状态         │
 ├─────────────┼──────────────────────┼──────────┼──────────────┤
-│ xiaohongshu │ permanent            │ 永久      │ ✓ 有效       │
+│ lark │ permanent            │ 永久      │ ✓ 有效       │
 └─────────────┴──────────────────────┴──────────┴──────────────┘
 ```
 
@@ -169,12 +169,12 @@ node agent.js "查看我的技能授权"
 ### 场景5：移除技能
 
 ```bash
-node agent.js "移除xiaohongshu技能"
+node agent.js "移除lark技能"
 ```
 
 **预期输出**：
 ```
-✓ 技能"xiaohongshu"已移除。
+✓ 技能"lark"已移除。
 
 授权信息已保留，可以随时重新安装。
 ```
@@ -194,21 +194,21 @@ echo "========================================="
 
 # 1. 清理环境
 echo -e "\n1. 清理测试环境..."
-rm -rf ~/.openclaw/licenses/xiaohongshu.json
-rm -rf ~/.openclaw/skills/xiaohongshu
+rm -rf ~/.openclaw/licenses/lark.json
+rm -rf ~/.openclaw/skills/lark
 
 # 2. 生成测试授权码
 echo -e "\n2. 生成测试授权码..."
 cd /Users/bobsharon/myfiles/xlab/JarvisMolt/scripts
-CODE=$(node generate-code.js xiaohongshu --type trial --days 7 2>&1 | grep "验证码:" | awk '{print $2}')
+CODE=$(node generate-code.js lark --type trial --days 7 2>&1 | grep "验证码:" | awk '{print $2}')
 echo "   授权码: $CODE"
 
 # 3. 创建授权缓存（模拟用户已输入授权码）
 echo -e "\n3. 创建授权缓存..."
 mkdir -p ~/.openclaw/licenses
-cat > ~/.openclaw/licenses/xiaohongshu.json << EOF
+cat > ~/.openclaw/licenses/lark.json << EOF
 {
-  "skill": "xiaohongshu",
+  "skill": "lark",
   "code": "$CODE",
   "activatedAt": $(date +%s)000,
   "expiresAt": $(date -v+7d +%s)000,
@@ -219,14 +219,14 @@ EOF
 # 4. 测试学习技能
 echo -e "\n4. 测试学习技能..."
 cd /Users/bobsharon/myfiles/xlab/JarvisMolt/Skills/skill-installer
-node agent.js "学习xiaohongshu技能 从 https://github.com/bobsharon/JarvisMolt"
+node agent.js "学习lark技能 从 https://github.com/bobsharon/JarvisMolt"
 
 # 5. 验证安装
 echo -e "\n5. 验证技能安装..."
-if [ -d ~/.openclaw/skills/xiaohongshu ]; then
+if [ -d ~/.openclaw/skills/lark ]; then
     echo "   ✓ 技能目录存在"
     echo "   ✓ 文件列表:"
-    ls -la ~/.openclaw/skills/xiaohongshu/
+    ls -la ~/.openclaw/skills/lark/
 else
     echo "   ✗ 技能未安装"
 fi
@@ -339,7 +339,7 @@ openclaw gateway restart
 ```
 在OpenClaw对话中输入：
 
-学习xiaohongshu技能 从 https://github.com/bobsharon/JarvisMolt
+学习lark技能 从 https://github.com/bobsharon/JarvisMolt
 ```
 
 ### 步骤3：输入授权码
@@ -375,8 +375,8 @@ ABCD-EFGH-JKLM-NPQR-XY
 
 ```bash
 # 清理测试数据
-rm -rf ~/.openclaw/licenses/xiaohongshu.json
-rm -rf ~/.openclaw/skills/xiaohongshu
+rm -rf ~/.openclaw/licenses/lark.json
+rm -rf ~/.openclaw/skills/lark
 ```
 
 ---

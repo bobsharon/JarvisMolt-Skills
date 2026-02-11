@@ -27,15 +27,15 @@ JarvisMolt技能市场的元技能，用于自动从GitHub下载、验证授权�
 ### 基础用法
 
 ```
-学习xiaohongshu技能 从 https://github.com/bobsharon/JarvisMolt
+学习lark技能 从 https://github.com/bobsharon/JarvisMolt
 ```
 
 ### 完整交互流程
 
 ```
-👤 用户: 学习xiaohongshu技能 从 https://github.com/bobsharon/JarvisMolt
+👤 用户: 学习lark技能 从 https://github.com/bobsharon/JarvisMolt
 
-🤖 Agent: 正在检查xiaohongshu技能...
+🤖 Agent: 正在检查lark技能...
          该技能需要授权码才能使用。
 
          请输入授权码：
@@ -44,14 +44,14 @@ JarvisMolt技能市场的元技能，用于自动从GitHub下载、验证授权�
 
 🤖 Agent: ✓ 验证授权码成功
          ✓ 正在从GitHub下载技能...
-         ✓ 正在安装到 ~/.openclaw/skills/xiaohongshu
+         ✓ 正在安装到 ~/.openclaw/skills/lark
          ✓ 技能安装完成！
 
-         xiaohongshu技能已就绪，现在可以使用：
-         - 小红书搜索 电商运营
-         - 小红书爬取 直播带货 --数量=50
+         lark技能已就绪，现在可以使用：
+         - 飞书发送消息
+         - 飞书创建文档
 
-         详细文档：~/.openclaw/skills/xiaohongshu/SKILL.md
+         详细文档：~/.openclaw/skills/lark/SKILL.md
 ```
 
 ---
@@ -65,7 +65,7 @@ JarvisMolt技能市场的元技能，用于自动从GitHub下载、验证授权�
 
 示例：
 ```
-学习xiaohongshu技能 从 https://github.com/bobsharon/JarvisMolt
+学习lark技能 从 https://github.com/bobsharon/JarvisMolt
 学习feishu技能 从 https://github.com/bobsharon/JarvisMolt
 ```
 
@@ -86,7 +86,7 @@ JarvisMolt技能市场的元技能，用于自动从GitHub下载、验证授权�
 
 示例：
 ```
-学习xiaohongshu技能 从 https://github.com/bobsharon/JarvisMolt 分支 dev
+学习lark技能 从 https://github.com/bobsharon/JarvisMolt 分支 dev
 ```
 
 ---
@@ -114,7 +114,7 @@ JarvisMolt技能市场的元技能，用于自动从GitHub下载、验证授权�
 验证通过后，将授权信息缓存到本地：
 ```json
 {
-  "skill": "xiaohongshu",
+  "skill": "lark",
   "code": "ABCD-EFGH-JKLM-NPQR-XY",
   "activatedAt": 1738743600000,
   "expiresAt": 1770279600000,
@@ -185,7 +185,7 @@ openclaw skills reload
 ┌─────────────┬──────────────────────┬──────────┬──────────────┐
 │ 技能名称     │ 授权类型              │ 剩余天数  │ 状态         │
 ├─────────────┼──────────────────────┼──────────┼──────────────┤
-│ xiaohongshu │ permanent            │ 永久      │ ✓ 有效       │
+│ lark │ permanent            │ 永久      │ ✓ 有效       │
 │ feishu      │ yearly               │ 256天     │ ✓ 有效       │
 └─────────────┴──────────────────────┴──────────┴──────────────┘
 ```
@@ -193,13 +193,13 @@ openclaw skills reload
 ### 更新授权码
 
 ```
-更新xiaohongshu技能授权
+更新lark技能授权
 ```
 
 ### 移除技能
 
 ```
-移除xiaohongshu技能
+移除lark技能
 ```
 
 ---
@@ -288,12 +288,12 @@ async function verifyLicense(skillName: string, code: string) {
 ```
 ~/.openclaw/
 ├── skills/                      # 已安装技能
-│   ├── xiaohongshu/
+│   ├── lark/
 │   ├── feishu/
 │   └── skill-installer/         # 本技能
 │
 └── licenses/                    # 授权缓存
-    ├── xiaohongshu.json
+    ├── lark.json
     └── feishu.json
 ```
 
@@ -311,7 +311,7 @@ async function verifyLicense(skillName: string, code: string) {
 
 ```
 # 更新已安装的技能
-更新xiaohongshu技能
+更新lark技能
 
 # 系统会：
 # 1. 检查现有授权是否仍然有效
@@ -322,7 +322,7 @@ async function verifyLicense(skillName: string, code: string) {
 ### 卸载技能
 
 ```
-移除xiaohongshu技能
+移除lark技能
 
 # 系统会：
 # 1. 删除技能文件
@@ -373,7 +373,7 @@ git config --global credential.helper store
 **解决方案**：
 ```bash
 # 1. 检查技能是否正确安装
-ls ~/.openclaw/skills/xiaohongshu/
+ls ~/.openclaw/skills/lark/
 
 # 2. 重启OpenClaw
 openclaw gateway restart
