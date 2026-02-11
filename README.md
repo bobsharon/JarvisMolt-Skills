@@ -18,7 +18,7 @@ cp -r JarvisMolt-Skills/Skills/skill-installer ~/.openclaw/skills/
 openclaw gateway restart
 
 # 2. 在OpenClaw对话中学习技能
-学习xiaohongshu技能 从 https://github.com/YOUR_USERNAME/JarvisMolt-Skills
+学习lark技能 从 https://github.com/YOUR_USERNAME/JarvisMolt-Skills
 
 # 3. 输入授权码（从技能提供者处获取）
 ABCD-EFGH-JKLM-NPQR-XY
@@ -30,7 +30,7 @@ ABCD-EFGH-JKLM-NPQR-XY
 
 ## 🎁 可用技能
 
-### 1. 小红书技能 (xiaohongshu)
+### 1. 飞书技能 (lark)
 
 - 智能混合策略（Chrome扩展 + 自动化浏览器）
 - 动态JavaScript内容渲染
@@ -39,11 +39,11 @@ ABCD-EFGH-JKLM-NPQR-XY
 
 **使用示例**：
 ```
-小红书搜索 电商运营
-小红书爬取 直播带货 --数量=50
+飞书搜索 电商运营
+飞书爬取 直播带货 --数量=50
 ```
 
-[查看文档](./Skills/xiaohongshu/)
+[查看文档](./Skills/lark/)
 
 ---
 
@@ -61,8 +61,8 @@ ABCD-EFGH-JKLM-NPQR-XY
 JarvisMolt-Skills/
 ├── Skills/
 │   ├── skill-installer/   # 技能安装器（必须）
-│   ├── xiaohongshu/        # 小红书技能
-│   └── feishu/             # 飞书技能（即将推出）
+│   ├── lark/        # 飞书技能
+│   └── lark/             # 飞书技能（即将推出）
 ├── .openclaw/
 │   └── browser-config.json # 浏览器配置
 └── README.md

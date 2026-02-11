@@ -77,7 +77,7 @@ function makeApiRequest(data) {
 function parseUserInput(message) {
   message = message.trim();
 
-  // 支持格式1: "学习 feishu 技能 从 https://..."
+  // 支持格式1: "学习 lark 技能 从 https://..."
   const learnMatch1 = message.match(/学习\s*(\w+)\s*技能\s*从\s*(https?:\/\/[^\s,]+)/i);
   if (learnMatch1) {
     return {
@@ -531,7 +531,7 @@ ${result.message || ''}
 
 使用方法：
 1. 学习技能：学习<技能名称>技能 从 <GitHub-URL>
-   例如：学习xiaohongshu技能 从 https://github.com/YOUR_USERNAME/JarvisMolt-Skills
+   例如：学习lark技能 从 https://github.com/YOUR_USERNAME/JarvisMolt-Skills
 
 2. 查看授权：查看我的技能授权
 
@@ -559,7 +559,7 @@ ${result.message || ''}
 module.exports = skillInstallerAgent;
 
 if (require.main === module) {
-  const testMessage = process.argv[2] || '学习xiaohongshu技能 从 https://github.com/YOUR_USERNAME/JarvisMolt-Skills';
+  const testMessage = process.argv[2] || '学习lark技能 从 https://github.com/YOUR_USERNAME/JarvisMolt-Skills';
 
   skillInstallerAgent({
     message: testMessage,
