@@ -9,6 +9,18 @@
 
 ## 🚀 快速开始
 
+### 前置准备（国内用户必读）
+
+**配置 npm 镜像（推荐）**
+
+```bash
+# 使用淘宝镜像（永久配置）
+npm config set registry https://registry.npmmirror.com
+
+# 验证配置
+npm config get registry
+```
+
 ### 第一步：安装 skill-installer
 
 ```bash
