@@ -1,0 +1,14 @@
+{
+  "name": "skill-installer",
+  "version": "2.0.0",
+  "description": "JarvisMolt技能市场安装器 - 通过在线API验证授权",
+  "main": "agent.js",
+  "dependencies": {
+    "tar": "^7.4.3"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "author": "JarvisMolt Team",
+  "license": "MIT"
+}

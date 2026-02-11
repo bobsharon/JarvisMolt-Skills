@@ -11,6 +11,7 @@ const path = require('path');
 const { execSync } = require('child_process');
 const os = require('os');
 const https = require('https');
+const tar = require('tar');
 
 // ======================================
 // 🌐 API配置
@@ -285,21 +286,26 @@ async function installSkill(tarGzFile, skillName) {
 
   if (fs.existsSync(targetDir)) {
     console.log('   ⚠️  技能已存在，将覆盖安装');
-    execSync(`rm -rf "${targetDir}"`);
+    fs.rmSync(targetDir, { recursive: true, force: true });
   }
 
-  // 解压 tar.gz 到目标目录
+  // 创建目标目录
+  fs.mkdirSync(targetDir, { recursive: true });
+
+  // 使用 Node.js tar 模块解压（跨平台兼容）
   try {
-    execSync(`mkdir -p "${targetDir}" && tar -xzf "${tarGzFile}" -C "${targetDir}"`, {
-      stdio: 'inherit'
+    await tar.x({
+      file: tarGzFile,
+      cwd: targetDir
     });
+    console.log('✓ 技能包解压成功\n');
   } catch (error) {
     throw new Error(`解压技能包失败: ${error.message}`);
   }
 
   const packageJson = path.join(targetDir, 'package.json');
   if (fs.existsSync(packageJson)) {
-    console.log('\n📚 正在安装依赖...');
+    console.log('📚 正在安装依赖...');
     execSync('npm install', {
       cwd: targetDir,
       stdio: 'inherit'
@@ -309,7 +315,7 @@ async function installSkill(tarGzFile, skillName) {
   console.log('\n✓ 技能安装完成\n');
 
   try {
-    execSync(`rm -f "${tarGzFile}"`);
+    fs.unlinkSync(tarGzFile);
     console.log('✓ 临时文件已清理\n');
   } catch (error) {
     console.warn(`⚠️  清理临时文件失败: ${error.message}`);
