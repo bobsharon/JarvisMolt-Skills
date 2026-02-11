@@ -93,7 +93,8 @@ function parseUserInput(message) {
     const skillNameChinese = learnMatch2[2].trim();
     // 将中文技能名映射到英文
     const skillNameMap = {
-      '飞书': 'feishu',
+      '飞书': 'feishu-skill',
+      '飞书技能': 'feishu-skill',
       '小红书': 'xiaohongshu'
     };
     const skillName = skillNameMap[skillNameChinese] || skillNameChinese;
