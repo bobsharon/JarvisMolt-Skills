@@ -379,69 +379,24 @@ async function skillInstallerAgent(context) {
         console.log(`🎯 目标技能: ${skillName}`);
         console.log(`🔗 GitHub仓库: ${githubUrl}\n`);
 
-        console.log('📋 步骤1: 检查授权...');
-        let license = checkCachedLicense(skillName);
+        console.log('📋 步骤1: 请输入授权码...');
 
-        if (license) {
-          if (license.expired) {
-            console.log('   ⚠️  授权已过期，需要重新授权');
-            license = null;
-          } else {
-            console.log(`   ✓ 找到有效授权 (${license.type})\n`);
-          }
-        }
-
-        if (!license) {
-          console.log('\n🔐 该技能需要授权码才能使用');
-          console.log('   请输入授权码（从技能提供者处获取）:\n');
-
-          return {
-            response: `该技能需要授权码才能使用。
-
-请输入授权码：（例如：ABCD-EFGH-JKLM-NPQR-XY）
-
-获取授权码请联系技能提供者。`,
-            needsInput: true,
-            context: {
-              action: 'verify-license',
-              skillName,
-              githubUrl
-            }
-          };
-        }
-
-        // 即使有缓存的授权，也需要重新验证以获取临时下载链接
-        console.log('📥 步骤2: 获取下载链接...');
-        const verifyResult = await verifyLicenseCode(skillName, license.code);
-
-        if (!verifyResult.valid) {
-          return {
-            response: `❌ 获取下载链接失败\n\n错误: ${verifyResult.error}\n${verifyResult.message || ''}\n\n请重新授权或联系技能提供者。`,
-            success: false
-          };
-        }
-
-        console.log('📥 步骤3: 下载技能包...');
-        const tarGzFile = await downloadSkillFromAPI(verifyResult.downloadUrl);
-
-        console.log('📦 步骤4: 安装技能...');
-        const targetDir = await installSkill(tarGzFile, skillName);
-
-        console.log('╔═══════════════════════════════════════════════════╗');
-        console.log('║              ✅ 技能学习完成！                     ║');
-        console.log('╚═══════════════════════════════════════════════════╝\n');
+        // 强制要求输入授权码，不使用缓存
+        console.log('\n🔐 该技能需要授权码才能使用');
+        console.log('   请输入授权码（从技能提供者处获取）:\n');
 
         return {
-          response: `✅ ${skillName}技能学习完成！
+          response: `该技能需要授权码才能使用。
 
-安装位置: ${targetDir}
+请输入授权码：（格式：XXXX-XXXX-XXXX-XXXX-XX）
 
-现在你可以使用该技能了。例如：
-- 小红书搜索 电商运营
-- 小红书爬取 直播带货 --数量=50
-
-详细文档: ${path.join(targetDir, 'SKILL.md')}`,
-          success: true
+获取授权码请联系技能提供者。`,
+          needsInput: true,
+          context: {
+            action: 'verify-license',
+            skillName,
+            githubUrl
+          }
         };
       }
 
