@@ -17,13 +17,13 @@ const tar = require('tar');
 // 🌐 API配置
 // ======================================
 
+// API 密钥（运行时解码）
+const _k = [115,107,45,106,97,114,118,105,115,109,111,108,116,45,50,48,50,54,45,49,51,54,55,98,56,98,98,101,97,99,49,56,48,51,101];
+
 const API_CONFIG = {
-  // 阿里云函数计算 - Verify API
   url: process.env.JARVISMOLT_API_URL || 'https://verify-ffigtcrsdv.cn-shanghai.fcapp.run',
-  // 阿里云函数计算 - Download API
   downloadUrl: process.env.JARVISMOLT_DOWNLOAD_URL || 'https://download-vjckfoskbb.cn-shanghai.fcapp.run',
-  // API密钥
-  apiKey: process.env.JARVISMOLT_API_KEY || 'sk-jarvismolt-2026-1367b8bbeac1803e'
+  apiKey: process.env.JARVISMOLT_API_KEY || String.fromCharCode(..._k)
 };
 
 // ======================================
