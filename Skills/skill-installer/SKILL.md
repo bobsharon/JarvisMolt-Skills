@@ -1,14 +1,14 @@
 ---
 name: skill-installer
-description: JarvisMolt技能市场安装器 - 从GitHub自动学习和安装技能
+description: JarvisMolt技能市场安装器 - 从Gitee自动学习和安装技能
 user-invocable: true
-version: 1.0.0
+version: 2.0.0
 author: JarvisMolt Team
 ---
 
 # Skill Installer - 技能安装器
 
-JarvisMolt技能市场的元技能，用于自动从GitHub下载、验证授权并安装技能。
+JarvisMolt技能市场的元技能，用于自动从Gitee下载、验证授权并安装技能。
 
 ## ⚠️ 安全规则
 
@@ -20,7 +20,7 @@ JarvisMolt技能市场的元技能，用于自动从GitHub下载、验证授权�
 
 ## 🎯 功能
 
-- ✅ 从GitHub自动克隆技能仓库
+- ✅ 从Gitee自动克隆技能仓库
 - ✅ 验证授权码（集成安全验证系统）
 - ✅ 自动安装技能到OpenClaw
 - ✅ 完整的交互式学习流程
@@ -33,13 +33,13 @@ JarvisMolt技能市场的元技能，用于自动从GitHub下载、验证授权�
 ### 基础用法
 
 ```
-学习lark技能 从 https://github.com/bobsharon/JarvisMolt
+从 https://gitee.com/bobsharon/JarvisMolt-Skills 学习lark技能
 ```
 
 ### 完整交互流程
 
 ```
-👤 用户: 学习lark技能 从 https://github.com/bobsharon/JarvisMolt
+👤 用户: 从 https://gitee.com/bobsharon/JarvisMolt-Skills 学习lark技能
 
 🤖 Agent: 正在检查lark技能...
          该技能需要授权码才能使用。
@@ -66,33 +66,33 @@ JarvisMolt技能市场的元技能，用于自动从GitHub下载、验证授权�
 
 ### 格式1：学习单个技能
 ```
-学习<技能名称>技能 从 <GitHub-URL>
+从 <Gitee-URL> 学习<技能名称>技能
 ```
 
 示例：
 ```
-学习lark技能 从 https://github.com/bobsharon/JarvisMolt
-学习lark技能 从 https://github.com/bobsharon/JarvisMolt
+从 https://gitee.com/bobsharon/JarvisMolt-Skills 学习lark技能
+从 https://gitee.com/bobsharon/JarvisMolt-Skills 学习lark技能
 ```
 
 ### 格式2：安装整个技能库
 ```
-安装技能库 从 <GitHub-URL>
+从 <Gitee-URL> 安装技能库
 ```
 
 示例：
 ```
-安装技能库 从 https://github.com/bobsharon/JarvisMolt
+安装技能库 从 https://gitee.com/bobsharon/JarvisMolt-Skills
 ```
 
 ### 格式3：使用分支
 ```
-学习<技能名称>技能 从 <GitHub-URL> 分支 <branch-name>
+从 <Gitee-URL> 学习<技能名称>技能 分支 <branch-name>
 ```
 
 示例：
 ```
-学习lark技能 从 https://github.com/bobsharon/JarvisMolt 分支 dev
+从 https://gitee.com/bobsharon/JarvisMolt-Skills 学习lark技能 分支 dev
 ```
 
 ---
@@ -159,6 +159,8 @@ cp -r /tmp/jarvismolt-<timestamp>/Skills/* ~/.openclaw/skills/
 cd ~/.openclaw/skills/<技能名称>
 npm install
 ```
+
+> 💡 国内用户建议先配置 npm 镜像：`npm config set registry https://registry.npmmirror.com`
 
 ### 4. 清理临时文件
 
@@ -436,6 +438,6 @@ openclaw logs --level=debug
 
 ---
 
-**版本**: 1.0.0
-**最后更新**: 2026-02-05
+**版本**: 2.0.0
+**最后更新**: 2026-02-17
 **维护者**: JarvisMolt Team

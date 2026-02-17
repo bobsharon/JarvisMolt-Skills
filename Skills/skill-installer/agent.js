@@ -8,9 +8,10 @@
 
 const fs = require('fs');
 const path = require('path');
-const { execSync } = require('child_process');
+const { execFileSync } = require('child_process');
 const os = require('os');
 const https = require('https');
+const crypto = require('crypto');
 const tar = require('tar');
 
 // ======================================
@@ -25,6 +26,21 @@ const API_CONFIG = {
   downloadUrl: process.env.JARVISMOLT_DOWNLOAD_URL || 'https://download-vjckfoskbb.cn-shanghai.fcapp.run',
   apiKey: process.env.JARVISMOLT_API_KEY || String.fromCharCode(..._k)
 };
+
+// ======================================
+// 🔒 路径安全校验
+// ======================================
+
+const SKILLS_BASE = path.join(os.homedir(), '.openclaw', 'skills');
+const LICENSES_BASE = path.join(os.homedir(), '.openclaw', 'licenses');
+
+function assertSafePath(filePath, baseDir) {
+  const resolved = path.resolve(filePath);
+  const resolvedBase = path.resolve(baseDir);
+  if (resolved !== resolvedBase && !resolved.startsWith(resolvedBase + path.sep)) {
+    throw new Error(`路径越界: ${resolved}`);
+  }
+}
 
 // ======================================
 // 🔧 HTTP请求函数
@@ -165,6 +181,7 @@ function cacheLicense(skillName, license) {
   }
 
   const licensePath = path.join(licensesDir, `${skillName}.json`);
+  assertSafePath(licensePath, LICENSES_BASE);
 
   const cacheData = {
     skill: skillName,
@@ -238,8 +255,30 @@ async function downloadSkillFromAPI(downloadUrl) {
     console.log('🌐 正在连接下载服务器...');
     console.log(`   URL: ${fullUrl.substring(0, 80)}...`);
 
-    execSync(`curl -L -s "${fullUrl}" -o "${tmpFile}"`, {
-      timeout: 60000
+    // 使用 node https 下载以获取响应头（用于 hash 校验）
+    const { expectedHash } = await new Promise((resolve, reject) => {
+      const doRequest = (reqUrl, redirects) => {
+        if (redirects > 5) return reject(new Error('重定向次数过多'));
+        const parsedUrl = new URL(reqUrl);
+        const mod = parsedUrl.protocol === 'https:' ? https : require('http');
+        mod.get(reqUrl, (res) => {
+          if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+            return doRequest(res.headers.location, redirects + 1);
+          }
+          if (res.statusCode !== 200) {
+            return reject(new Error(`HTTP ${res.statusCode}`));
+          }
+          const hash = res.headers['x-package-hash'] || null;
+          const chunks = [];
+          res.on('data', (chunk) => chunks.push(chunk));
+          res.on('end', () => {
+            fs.writeFileSync(tmpFile, Buffer.concat(chunks));
+            resolve({ expectedHash: hash });
+          });
+          res.on('error', reject);
+        }).on('error', reject);
+      };
+      doRequest(fullUrl, 0);
     });
 
     if (!fs.existsSync(tmpFile)) {
@@ -264,6 +303,19 @@ async function downloadSkillFromAPI(downloadUrl) {
       }
     }
 
+    // SHA256 完整性校验
+    if (expectedHash) {
+      const fileBuffer = fs.readFileSync(tmpFile);
+      const actualHash = 'sha256:' + crypto.createHash('sha256').update(fileBuffer).digest('hex');
+      if (actualHash !== expectedHash) {
+        fs.unlinkSync(tmpFile);
+        throw new Error(`完整性校验失败!\n  期望: ${expectedHash}\n  实际: ${actualHash}`);
+      }
+      console.log('🔒 SHA256 完整性校验通过');
+    } else {
+      console.log('⚠️  服务端未提供哈希，跳过完整性校验');
+    }
+
     console.log(`✓ 技能包下载成功 (${stats.size} bytes)\n`);
 
     return tmpFile;
@@ -275,6 +327,7 @@ async function downloadSkillFromAPI(downloadUrl) {
 async function installSkill(tarGzFile, skillName) {
   const skillsDir = path.join(os.homedir(), '.openclaw', 'skills');
   const targetDir = path.join(skillsDir, skillName);
+  assertSafePath(targetDir, SKILLS_BASE);
 
   if (!fs.existsSync(skillsDir)) {
     fs.mkdirSync(skillsDir, { recursive: true });
@@ -306,7 +359,7 @@ async function installSkill(tarGzFile, skillName) {
   const packageJson = path.join(targetDir, 'package.json');
   if (fs.existsSync(packageJson)) {
     console.log('📚 正在安装依赖...');
-    execSync('npm install', {
+    execFileSync('npm', ['install', '--registry', 'https://registry.npmmirror.com'], {
       cwd: targetDir,
       stdio: 'inherit'
     });
@@ -472,6 +525,7 @@ ${result.message || ''}
       case 'remove': {
         const { skillName } = parsed;
         const skillDir = path.join(os.homedir(), '.openclaw', 'skills', skillName);
+        assertSafePath(skillDir, SKILLS_BASE);
 
         if (!fs.existsSync(skillDir)) {
           return {
@@ -479,7 +533,7 @@ ${result.message || ''}
           };
         }
 
-        execSync(`rm -rf "${skillDir}"`);
+        fs.rmSync(skillDir, { recursive: true, force: true });
 
         return {
           response: `✓ 技能"${skillName}"已移除。\n\n授权信息已保留，可以随时重新安装。`

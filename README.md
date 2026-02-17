@@ -25,7 +25,7 @@ npm config get registry
 
 ```bash
 # 克隆仓库
-git clone https://github.com/bobsharon/JarvisMolt-Skills.git
+git clone https://gitee.com/bobsharon/JarvisMolt-Skills.git
 
 # 安装 skill-installer（技能安装器）
 cp -r JarvisMolt-Skills/Skills/skill-installer ~/.openclaw/skills/
@@ -43,7 +43,7 @@ openclaw gateway restart
 在 OpenClaw 对话中输入：
 
 ```
-从 https://github.com/bobsharon/JarvisMolt-Skills，学习飞书技能
+从 https://gitee.com/bobsharon/JarvisMolt-Skills，学习飞书技能
 ```
 
 ### 第三步：输入授权码
@@ -75,8 +75,18 @@ XXXX-XXXX-XXXX-XXXX-XX
 ## 📖 获取授权码
 
 联系技能提供者获取授权码：
-- Email: skills@jarvismolt.com
 - 微信: JarvisMolt-Skills
+
+### 付费模式
+
+按月/季/年的 SaaS 化服务：
+
+| 周期 | 标准版 | 旗舰版 |
+|------|--------|--------|
+| 试用 | 免费 7 天（旗舰版全功能） | — |
+| 月付 | ¥29.9 | ¥49.9 |
+| 季付 | ¥79.9 | ¥129.9 |
+| 年付 | ¥199.9 | ¥349.9 |
 
 ---
 
