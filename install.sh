@@ -132,7 +132,7 @@ main() {
   mkdir -p "$INSTALL_DIR"
 
   if [ "$download_ok" = true ]; then
-    tar xzf "$tarball" -C "$INSTALL_DIR" --strip-components=0 2>/dev/null \
+    tar xzf "$tarball" -C "$INSTALL_DIR" --strip-components=1 2>/dev/null \
       || tar xzf "$tarball" -C "$INSTALL_DIR" 2>/dev/null
   else
     cp -f "${TMPDIR_INSTALL}/skill-installer/"* "$INSTALL_DIR/"
