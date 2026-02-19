@@ -9,7 +9,24 @@
 
 ## 🚀 快速开始
 
-### 前置准备（国内用户必读）
+### 一键安装（推荐）
+
+```bash
+curl -fsSL https://gitee.com/bobsharon/JarvisMolt-Skills/raw/master/install.sh | bash
+```
+
+安装完成后，在 OpenClaw 中输入：
+
+```
+从 https://gitee.com/bobsharon/JarvisMolt-Skills 学习飞书技能
+```
+
+输入您购买的授权码即可完成安装。
+
+<details>
+<summary>手动安装（备选）</summary>
+
+#### 前置准备（国内用户必读）
 
 **配置 npm 镜像（推荐）**
 
@@ -21,7 +38,7 @@ npm config set registry https://registry.npmmirror.com
 npm config get registry
 ```
 
-### 第一步：安装 skill-installer
+#### 步骤
 
 ```bash
 # 克隆仓库
@@ -38,23 +55,7 @@ npm install
 openclaw gateway restart
 ```
 
-### 第二步：在 OpenClaw 中学习技能
-
-在 OpenClaw 对话中输入：
-
-```
-从 https://gitee.com/bobsharon/JarvisMolt-Skills 学习飞书技能
-```
-
-### 第三步：输入授权码
-
-系统会提示输入授权码，输入您购买的授权码：
-
-```
-XXXX-XXXX-XXXX-XXXX-XX
-```
-
-✅ 完成！技能会自动下载、验证并安装。
+</details>
 
 ---
 
@@ -137,5 +138,5 @@ A: 在 OpenClaw 中输入 "更新XX技能"
 
 ---
 
-**最后更新**: 2026-02-17
+**最后更新**: 2026-02-19
 **维护者**: JarvisMolt Team
