@@ -15,6 +15,14 @@ const crypto = require('crypto');
 const tar = require('tar');
 
 // ======================================
+// 📐 Constants
+// ======================================
+
+const MAX_REDIRECTS = 5;
+const MIN_VALID_PACKAGE_SIZE = 1000; // bytes — below this, likely an error response
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+// ======================================
 // 🌐 API配置
 // ======================================
 
@@ -220,7 +228,7 @@ async function downloadSkillFromAPI(downloadUrl) {
     // 使用 node https 下载以获取响应头（用于 hash 校验）
     const { expectedHash } = await new Promise((resolve, reject) => {
       const doRequest = (reqUrl, redirects) => {
-        if (redirects > 5) return reject(new Error('重定向次数过多'));
+        if (redirects > MAX_REDIRECTS) return reject(new Error('重定向次数过多'));
         const parsedUrl = new URL(reqUrl);
         if (parsedUrl.protocol !== 'https:') {
           return reject(new Error('安全策略：仅支持 HTTPS 连接，拒绝 HTTP 重定向'));
@@ -255,7 +263,7 @@ async function downloadSkillFromAPI(downloadUrl) {
     }
 
     // 检查是否是错误响应（JSON格式）
-    if (stats.size < 1000) {
+    if (stats.size < MIN_VALID_PACKAGE_SIZE) {
       const content = fs.readFileSync(tmpFile, 'utf8');
       try {
         const json = JSON.parse(content);
@@ -356,7 +364,7 @@ function listAuthorizedSkills() {
 
     const now = Date.now();
     const daysRemaining = license.expiresAt ?
-      Math.floor((license.expiresAt - now) / (24 * 60 * 60 * 1000)) :
+      Math.floor((license.expiresAt - now) / MS_PER_DAY) :
       Infinity;
 
     return {
@@ -366,6 +374,27 @@ function listAuthorizedSkills() {
       status: (license.expiresAt && license.expiresAt < now) ? '已过期' : '✓ 有效'
     };
   });
+}
+
+/**
+ * 检查指定技能的本地授权缓存是否仍然有效（未过期）
+ * @returns {{ valid: boolean, license?: object, error?: string }}
+ */
+function checkCachedLicense(skillName) {
+  const licensePath = path.join(os.homedir(), '.openclaw', 'licenses', `${skillName}.json`);
+  assertSafePath(licensePath, LICENSES_BASE);
+
+  if (!fs.existsSync(licensePath)) {
+    return { valid: false, error: '未找到授权信息' };
+  }
+
+  const license = JSON.parse(fs.readFileSync(licensePath, 'utf8'));
+
+  if (license.expiresAt && license.expiresAt < Date.now()) {
+    return { valid: false, error: '授权已过期', license };
+  }
+
+  return { valid: true, license };
 }
 
 // ======================================
@@ -599,6 +628,7 @@ ${result.message || ''}
 // ======================================
 
 module.exports = skillInstallerAgent;
+module.exports.checkCachedLicense = checkCachedLicense;
 
 if (require.main === module) {
   const testMessage = process.argv[2] || '从 https://gitee.com/bobsharon/JarvisMolt-Skills 学习lark技能';
