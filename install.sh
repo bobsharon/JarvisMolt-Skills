@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 # JarvisMolt skill-installer 一键安装脚本
-# 用法: curl -fsSL https://gitee.com/bobsharon/JarvisMolt-Skills/raw/master/install.sh | bash
+# 用法: curl -fsSL https://gitee.com/bobsharon/JarvisMolt-Skills/raw/main/install.sh | bash
 set -euo pipefail
 
 # ── 版本 & URL ──────────────────────────────────────────────
 VERSION="1.0.0"
 TARBALL_URL="https://gitee.com/bobsharon/JarvisMolt-Skills/releases/download/v${VERSION}/skill-installer.tar.gz"
-FALLBACK_BASE="https://gitee.com/bobsharon/JarvisMolt-Skills/raw/master/Skills/skill-installer"
+FALLBACK_BASE="https://gitee.com/bobsharon/JarvisMolt-Skills/raw/main/Skills/skill-installer"
 INSTALL_DIR="${HOME}/.openclaw/skills/skill-installer"
 TAOBAO_REGISTRY="https://registry.npmmirror.com"
 

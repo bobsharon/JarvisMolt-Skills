@@ -12,7 +12,7 @@
 ### 一键安装（推荐）
 
 ```bash
-curl -fsSL https://gitee.com/bobsharon/JarvisMolt-Skills/raw/master/install.sh | bash
+curl -fsSL https://gitee.com/bobsharon/JarvisMolt-Skills/raw/main/install.sh | bash
 ```
 
 安装完成后，在 OpenClaw 中输入：
