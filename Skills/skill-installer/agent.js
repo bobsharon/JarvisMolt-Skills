@@ -321,7 +321,8 @@ async function installSkill(tarGzFile, skillName) {
   try {
     await tar.x({
       file: tarGzFile,
-      cwd: targetDir
+      cwd: targetDir,
+      strip: 1
     });
     console.log('✓ 技能包解压成功\n');
   } catch (error) {
