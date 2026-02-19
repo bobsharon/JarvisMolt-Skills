@@ -94,17 +94,7 @@ function makeApiRequest(data) {
 function parseUserInput(message) {
   message = message.trim();
 
-  // 支持格式1: "学习 lark 技能 从 https://..."
-  const learnMatch1 = message.match(/学习\s*(\w+)\s*技能\s*从\s*(https?:\/\/[^\s,]+)/i);
-  if (learnMatch1) {
-    return {
-      action: 'learn',
-      skillName: learnMatch1[1],
-      githubUrl: learnMatch1[2]
-    };
-  }
-
-  // 支持格式2: "从 https://...，学习飞书技能" 或 "从 https://... 学习飞书技能"
+  // 支持格式: "从 https://...，学习飞书技能" 或 "从 https://... 学习飞书技能"
   const learnMatch2 = message.match(/从\s*(https?:\/\/[^\s,]+)[,，]?\s*学习\s*(.+?)\s*技能/i);
   if (learnMatch2) {
     const skillNameChinese = learnMatch2[2].trim();
@@ -117,15 +107,7 @@ function parseUserInput(message) {
     return {
       action: 'learn',
       skillName: skillName,
-      githubUrl: learnMatch2[1].replace(/[,，]+$/, '') // 移除末尾的逗号
-    };
-  }
-
-  const installMatch = message.match(/安装\s*技能库\s*从\s*(https?:\/\/[^\s,]+)/i);
-  if (installMatch) {
-    return {
-      action: 'install-all',
-      githubUrl: installMatch[1]
+      giteeUrl: learnMatch2[1].replace(/[,，]+$/, '') // 移除末尾的逗号
     };
   }
 
@@ -152,27 +134,6 @@ function parseUserInput(message) {
   return { action: 'unknown' };
 }
 
-function checkCachedLicense(skillName) {
-  const licensePath = path.join(os.homedir(), '.openclaw', 'licenses', `${skillName}.json`);
-
-  if (!fs.existsSync(licensePath)) {
-    return null;
-  }
-
-  try {
-    const licenseData = JSON.parse(fs.readFileSync(licensePath, 'utf8'));
-
-    if (licenseData.expiresAt && licenseData.expiresAt < Date.now()) {
-      return { expired: true, ...licenseData };
-    }
-
-    return licenseData;
-  } catch (error) {
-    console.error(`读取授权缓存失败: ${error.message}`);
-    return null;
-  }
-}
-
 function cacheLicense(skillName, license) {
   const licensesDir = path.join(os.homedir(), '.openclaw', 'licenses');
 
@@ -188,7 +149,8 @@ function cacheLicense(skillName, license) {
     code: license.code,
     activatedAt: Date.now(),
     expiresAt: license.expiresAt,
-    type: license.type
+    type: license.type,
+    tier: license.tier || 'standard'
   };
 
   fs.writeFileSync(licensePath, JSON.stringify(cacheData, null, 2), { mode: 0o600 });
@@ -260,8 +222,10 @@ async function downloadSkillFromAPI(downloadUrl) {
       const doRequest = (reqUrl, redirects) => {
         if (redirects > 5) return reject(new Error('重定向次数过多'));
         const parsedUrl = new URL(reqUrl);
-        const mod = parsedUrl.protocol === 'https:' ? https : require('http');
-        mod.get(reqUrl, (res) => {
+        if (parsedUrl.protocol !== 'https:') {
+          return reject(new Error('安全策略：仅支持 HTTPS 连接，拒绝 HTTP 重定向'));
+        }
+        https.get(reqUrl, (res) => {
           if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
             return doRequest(res.headers.location, redirects + 1);
           }
@@ -427,10 +391,10 @@ async function skillInstallerAgent(context) {
   try {
     switch (parsed.action) {
       case 'learn': {
-        const { skillName, githubUrl } = parsed;
+        const { skillName, giteeUrl } = parsed;
 
         console.log(`🎯 目标技能: ${skillName}`);
-        console.log(`🔗 GitHub仓库: ${githubUrl}\n`);
+        console.log(`🔗 Gitee仓库: ${giteeUrl}\n`);
 
         console.log('📋 步骤1: 请输入授权码...');
 
@@ -448,13 +412,13 @@ async function skillInstallerAgent(context) {
           context: {
             action: 'verify-license',
             skillName,
-            githubUrl
+            giteeUrl
           }
         };
       }
 
       case 'verify-license': {
-        const { skillName, githubUrl } = parsed;
+        const { skillName, giteeUrl } = parsed;
         const licenseCode = message.trim();
 
         console.log(`\n🔐 验证授权码: ${licenseCode}`);
@@ -503,7 +467,7 @@ ${result.message || ''}
 
         if (skills.length === 0) {
           return {
-            response: '您还没有授权任何技能。\n\n使用"学习XX技能 从 URL"来学习新技能。'
+            response: '您还没有授权任何技能。\n\n使用"从 <Gitee-URL> 学习XX技能"来学习新技能。'
           };
         }
 
@@ -520,6 +484,67 @@ ${result.message || ''}
         response += '└─────────────┴──────────────────────┴──────────┴──────────────┘';
 
         return { response };
+      }
+
+      case 'update': {
+        const { skillName } = parsed;
+        const skillDir = path.join(os.homedir(), '.openclaw', 'skills', skillName);
+        assertSafePath(skillDir, SKILLS_BASE);
+
+        if (!fs.existsSync(skillDir)) {
+          return {
+            response: `技能"${skillName}"尚未安装，无法更新。\n\n请先使用"从 <Gitee-URL> 学习${skillName}技能"安装。`
+          };
+        }
+
+        console.log(`🔄 准备更新技能: ${skillName}`);
+        console.log('📋 请输入授权码以验证更新权限...\n');
+
+        return {
+          response: `正在准备更新"${skillName}"技能。\n\n请输入授权码以验证更新权限：（格式：XXXX-XXXX-XXXX-XXXX-XX）`,
+          needsInput: true,
+          context: {
+            action: 'verify-update',
+            skillName
+          }
+        };
+      }
+
+      case 'verify-update': {
+        const { skillName } = parsed;
+        const licenseCode = message.trim();
+        const skillDir = path.join(os.homedir(), '.openclaw', 'skills', skillName);
+        assertSafePath(skillDir, SKILLS_BASE);
+
+        console.log(`\n🔐 验证授权码: ${licenseCode}`);
+        console.log(`   技能: ${skillName}\n`);
+
+        const result = await verifyLicenseCode(skillName, licenseCode);
+
+        if (!result.valid) {
+          return {
+            response: `❌ 授权码验证失败\n\n错误: ${result.error}\n${result.message || ''}\n\n请检查授权码是否正确。`,
+            success: false
+          };
+        }
+
+        console.log('✓ 授权码验证成功，开始更新\n');
+
+        // 保留授权缓存，删除旧版技能目录
+        console.log(`🗑️  删除旧版本: ${skillDir}`);
+        fs.rmSync(skillDir, { recursive: true, force: true });
+
+        // 缓存新的授权信息
+        cacheLicense(skillName, result.license);
+
+        // 重新下载安装
+        const tarGzFile = await downloadSkillFromAPI(result.downloadUrl);
+        const targetDir = await installSkill(tarGzFile, skillName);
+
+        return {
+          response: `✅ ${skillName}技能更新完成！\n\n安装位置: ${targetDir}\n\n技能已更新到最新版本。`,
+          success: true
+        };
       }
 
       case 'remove': {
@@ -545,12 +570,14 @@ ${result.message || ''}
           response: `Skill Installer - 技能安装器 (在线API验证版本)
 
 使用方法：
-1. 学习技能：学习<技能名称>技能 从 <GitHub-URL>
-   例如：学习lark技能 从 https://github.com/YOUR_USERNAME/JarvisMolt-Skills
+1. 学习技能：从 <Gitee-URL> 学习<技能名称>技能
+   例如：从 https://gitee.com/bobsharon/JarvisMolt-Skills 学习lark技能
 
 2. 查看授权：查看我的技能授权
 
-3. 移除技能：移除<技能名称>技能
+3. 更新技能：更新<技能名称>技能
+
+4. 移除技能：移除<技能名称>技能
 
 需要帮助？请查看文档：~/.openclaw/skills/skill-installer/SKILL.md`
         };
@@ -574,7 +601,7 @@ ${result.message || ''}
 module.exports = skillInstallerAgent;
 
 if (require.main === module) {
-  const testMessage = process.argv[2] || '学习lark技能 从 https://github.com/YOUR_USERNAME/JarvisMolt-Skills';
+  const testMessage = process.argv[2] || '从 https://gitee.com/bobsharon/JarvisMolt-Skills 学习lark技能';
 
   skillInstallerAgent({
     message: testMessage,

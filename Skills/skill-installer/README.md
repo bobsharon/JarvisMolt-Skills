@@ -15,7 +15,7 @@
 ### 准备工作
 
 ```bash
-cd /Users/bobsharon/myfiles/xlab/JarvisMolt/Skills/skill-installer
+cd Skills/skill-installer
 
 # 确保脚本可执行
 chmod +x agent.js
@@ -27,7 +27,7 @@ chmod +x agent.js
 
 ```bash
 # 步骤1：用户输入学习指令
-node agent.js "学习lark技能 从 https://github.com/bobsharon/JarvisMolt"
+node agent.js "从 https://gitee.com/bobsharon/JarvisMolt-Skills 学习lark技能"
 
 # 预期输出：
 # 提示输入授权码
@@ -40,9 +40,9 @@ node agent.js "学习lark技能 从 https://github.com/bobsharon/JarvisMolt"
 ╚═══════════════════════════════════════════════════╝
 
 🎯 目标技能: lark
-🔗 GitHub仓库: https://github.com/bobsharon/JarvisMolt
+🔗 Gitee仓库: https://gitee.com/bobsharon/JarvisMolt-Skills
 
-📋 步骤1: 检查授权...
+📋 步骤1: 请输入授权码...
 
 🔐 该技能需要授权码才能使用
    请输入授权码（从技能提供者处获取）:
@@ -53,7 +53,7 @@ Agent返回结果:
 
 该技能需要授权码才能使用。
 
-请输入授权码：（例如：ABCD-EFGH-JKLM-NPQR-XY）
+请输入授权码：（格式：XXXX-XXXX-XXXX-XXXX-XX）
 
 获取授权码请联系技能提供者。
 
@@ -61,7 +61,7 @@ Agent返回结果:
 Context: {
   action: 'verify-license',
   skillName: 'lark',
-  githubUrl: 'https://github.com/bobsharon/JarvisMolt'
+  giteeUrl: 'https://gitee.com/bobsharon/JarvisMolt-Skills'
 }
 ```
 
@@ -82,6 +82,9 @@ node generate-code.js lark --type trial --days 7
 
 ### 场景3：模拟用户已有授权
 
+> **注意**：即使本地存在授权缓存，agent 也会强制要求重新输入授权码（不使用缓存）。
+> 缓存仅用于 `查看技能授权` 命令展示已激活的技能信息。
+
 **方式A：手动创建授权缓存**
 
 ```bash
@@ -95,13 +98,14 @@ cat > ~/.openclaw/licenses/lark.json << 'EOF'
   "code": "TEST-CODE-FOR-DEMO",
   "activatedAt": 1738743600000,
   "expiresAt": 1770279600000,
-  "type": "permanent"
+  "type": "permanent",
+  "tier": "standard"
 }
 EOF
 
-# 再次运行agent
-cd /Users/bobsharon/myfiles/xlab/JarvisMolt/Skills/skill-installer
-node agent.js "学习lark技能 从 https://github.com/bobsharon/JarvisMolt"
+# 再次运行agent — 仍然会提示输入授权码
+cd Skills/skill-installer
+node agent.js "从 https://gitee.com/bobsharon/JarvisMolt-Skills 学习lark技能"
 ```
 
 **预期输出**：
@@ -111,38 +115,29 @@ node agent.js "学习lark技能 从 https://github.com/bobsharon/JarvisMolt"
 ╚═══════════════════════════════════════════════════╝
 
 🎯 目标技能: lark
-🔗 GitHub仓库: https://github.com/bobsharon/JarvisMolt
+🔗 Gitee仓库: https://gitee.com/bobsharon/JarvisMolt-Skills
 
-📋 步骤1: 检查授权...
-   ✓ 找到有效授权 (permanent)
+📋 步骤1: 请输入授权码...
 
-📥 步骤2: 下载技能...
-   仓库: https://github.com/bobsharon/JarvisMolt
-   临时目录: /tmp/jarvismolt-1738743600000
+🔐 该技能需要授权码才能使用
+   请输入授权码（从技能提供者处获取）:
 
-Cloning into '/tmp/jarvismolt-1738743600000'...
-✓ GitHub仓库克隆成功
+═══════════════════════════════════════════════════
+Agent返回结果:
+═══════════════════════════════════════════════════
 
-📦 步骤3: 安装技能...
-   源目录: /tmp/jarvismolt-1738743600000/Skills/lark
-   目标目录: ~/.openclaw/skills/lark
+该技能需要授权码才能使用。
 
-✓ 技能安装完成
-✓ 临时文件已清理
+请输入授权码：（格式：XXXX-XXXX-XXXX-XXXX-XX）
 
-╔═══════════════════════════════════════════════════╗
-║              ✅ 技能学习完成！                     ║
-╚═══════════════════════════════════════════════════╝
+获取授权码请联系技能提供者。
 
-✅ lark技能学习完成！
-
-安装位置: ~/.openclaw/skills/lark
-
-现在你可以使用该技能了。例如：
-- 小红书搜索 电商运营
-- 小红书爬取 直播带货 --数量=50
-
-详细文档: ~/.openclaw/skills/lark/SKILL.md
+⚠️  需要用户输入
+Context: {
+  action: 'verify-license',
+  skillName: 'lark',
+  giteeUrl: 'https://gitee.com/bobsharon/JarvisMolt-Skills'
+}
 ```
 
 ---
@@ -199,7 +194,7 @@ rm -rf ~/.openclaw/skills/lark
 
 # 2. 生成测试授权码
 echo -e "\n2. 生成测试授权码..."
-cd /Users/bobsharon/myfiles/xlab/JarvisMolt/scripts
+cd ../../scripts
 CODE=$(node generate-code.js lark --type trial --days 7 2>&1 | grep "验证码:" | awk '{print $2}')
 echo "   授权码: $CODE"
 
@@ -218,8 +213,8 @@ EOF
 
 # 4. 测试学习技能
 echo -e "\n4. 测试学习技能..."
-cd /Users/bobsharon/myfiles/xlab/JarvisMolt/Skills/skill-installer
-node agent.js "学习lark技能 从 https://github.com/bobsharon/JarvisMolt"
+cd Skills/skill-installer
+node agent.js "从 https://gitee.com/bobsharon/JarvisMolt-Skills 学习lark技能"
 
 # 5. 验证安装
 echo -e "\n5. 验证技能安装..."
@@ -244,7 +239,7 @@ echo "========================================="
 
 ```bash
 # 保存上述脚本
-cat > /Users/bobsharon/myfiles/xlab/JarvisMolt/Skills/skill-installer/test-flow.sh << 'EOF'
+cat > Skills/skill-installer/test-flow.sh << 'EOF'
 [粘贴上述脚本内容]
 EOF
 
@@ -262,10 +257,9 @@ chmod +x test-flow.sh
 ### 功能测试
 
 - [ ] 解析用户输入（学习技能）
-- [ ] 检查本地授权缓存
 - [ ] 提示输入授权码
 - [ ] 验证授权码
-- [ ] 从GitHub克隆仓库
+- [ ] 从安全服务器下载技能包
 - [ ] 安装技能到~/.openclaw/skills/
 - [ ] 清理临时文件
 - [ ] 查看授权列表
@@ -275,24 +269,25 @@ chmod +x test-flow.sh
 
 - [ ] 授权码不存在
 - [ ] 授权码已过期
-- [ ] GitHub URL错误
-- [ ] 技能目录不存在
 - [ ] 网络连接失败
+- [ ] 技能目录不存在
 - [ ] 权限不足
 
 ---
 
 ## 🐛 常见问题
 
-### Q1: Git克隆失败
+### Q1: 下载失败
 
-**问题**：`fatal: could not read Username`
+**问题**：技能包下载超时或连接失败
 
 **解决**：
 ```bash
-# 确保使用HTTPS URL，不要用SSH
-# 正确：https://github.com/user/repo
-# 错误：git@github.com:user/repo.git
+# 检查网络连接
+curl -I https://your-api-server.com
+
+# 确保 API 服务器可达
+# 如果在国内，检查是否需要代理
 ```
 
 ### Q2: 找不到验证码脚本
@@ -302,7 +297,7 @@ chmod +x test-flow.sh
 **解决**：
 ```bash
 # 确保scripts目录存在
-ls -la /Users/bobsharon/myfiles/xlab/JarvisMolt/scripts/validate-code.js
+ls -la scripts/validate-code.js
 
 # 如果不存在，回到项目根目录查看
 ```
@@ -327,7 +322,7 @@ chmod 700 ~/.openclaw/licenses
 
 ```bash
 # 复制到OpenClaw技能目录
-cp -r /Users/bobsharon/myfiles/xlab/JarvisMolt/Skills/skill-installer \
+cp -r Skills/skill-installer \
       ~/.openclaw/skills/
 
 # 重启OpenClaw
@@ -339,7 +334,7 @@ openclaw gateway restart
 ```
 在OpenClaw对话中输入：
 
-学习lark技能 从 https://github.com/bobsharon/JarvisMolt
+从 https://gitee.com/bobsharon/JarvisMolt-Skills 学习lark技能
 ```
 
 ### 步骤3：输入授权码
@@ -367,7 +362,7 @@ ABCD-EFGH-JKLM-NPQR-XY
 - [ ] 支持断点续传
 - [ ] 添加技能依赖检查
 - [ ] 实现技能版本管理
-- [ ] 支持私有GitHub仓库
+- [ ] 支持私有 Gitee 仓库
 
 ---
 
@@ -381,5 +376,5 @@ rm -rf ~/.openclaw/skills/lark
 
 ---
 
-**项目路径**: `/Users/bobsharon/myfiles/xlab/JarvisMolt/Skills/skill-installer`
-**最后更新**: 2026-02-05
+**项目路径**: `Skills/skill-installer`
+**最后更新**: 2026-02-17
