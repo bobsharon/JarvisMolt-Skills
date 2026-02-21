@@ -81,7 +81,7 @@ node {baseDir}/agent.js check <skillName>
    - 失败 → 展示错误
    - 成功 → 执行以下 post-install 流程：
      1. 告诉用户安装完成
-     2. 读取新安装技能的 SKILL.md（路径：`~/.openclaw/skills/<skillName>/SKILL.md`），从中提取功能概览，向用户展示该技能支持的主要功能和命令示例
+     2. 读取新安装技能的 SKILL.md（路径：`~/.openclaw/skills/<skillName>/SKILL.md`），从中提取功能概览。必须同时展示每个功能对应的使用命令（从 SKILL.md 的命令示例中提取），让用户知道怎么用。格式示例：「📄 文档搜索 — `飞书搜索文档 关键词`」
      3. 如果 SKILL.md 中标注了 `requires-auth: true`，告诉用户：重启完成后，需要输入对应的授权配置命令来完成配置（如「飞书授权」）
      4. 提示需要执行 `openclaw daemon restart` 加载新技能，询问是否帮忙执行
 
