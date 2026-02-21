@@ -32,6 +32,7 @@ const _k = [115,107,45,106,97,114,118,105,115,109,111,108,116,45,50,48,50,54,45,
 const API_CONFIG = {
   url: process.env.JARVISMOLT_API_URL || 'https://verify-ffigtcrsdv.cn-shanghai.fcapp.run',
   downloadUrl: process.env.JARVISMOLT_DOWNLOAD_URL || 'https://download-vjckfoskbb.cn-shanghai.fcapp.run',
+  paymentUrl: process.env.JARVISMOLT_PAYMENT_URL || 'https://payment-xxxx.cn-shanghai.fcapp.run',
   apiKey: process.env.JARVISMOLT_API_KEY || String.fromCharCode(..._k)
 };
 
@@ -91,6 +92,27 @@ function makeApiRequest(data) {
     });
 
     req.write(JSON.stringify(data));
+    req.end();
+  });
+}
+
+function makePaymentRequest(endpoint, data) {
+  return new Promise((resolve, reject) => {
+    const url = new URL(endpoint, API_CONFIG.paymentUrl);
+    const body = JSON.stringify(data);
+
+    const req = https.request(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) }
+    }, (res) => {
+      let chunks = '';
+      res.on('data', c => chunks += c);
+      res.on('end', () => {
+        try { resolve(JSON.parse(chunks)); } catch (e) { reject(new Error('Invalid JSON response')); }
+      });
+    });
+    req.on('error', reject);
+    req.write(body);
     req.end();
   });
 }
@@ -430,22 +452,85 @@ async function skillInstallerAgent(context) {
 
         // 强制要求输入授权码，不使用缓存
         console.log('\n🔐 该技能需要授权码才能使用');
-        console.log('   请输入授权码（从技能提供者处获取）:\n');
 
         return {
           response: `该技能需要授权码才能使用。
 
-请输入授权码：（格式：XXXX-XXXX-XXXX-XXXX-XX）
+请选择：
+1. 输入授权码（已有授权码）
+2. 购买授权（支付宝/微信支付）
+3. 了解更多
 
-获取授权码请联系技能提供者。`,
+请输入选项编号或直接输入授权码：`,
           needsInput: true,
           context: {
-            action: 'verify-license',
+            action: 'learn-choice',
             skillName,
             giteeUrl
           }
         };
       }
+
+      case 'learn-choice': {
+        const { skillName, giteeUrl } = parsed;
+        const input = message.trim();
+
+        if (input === '2') {
+          // 购买流程
+          return {
+            response: `📦 选择套餐：
+
+1. 月卡 ¥29.9（30天）
+2. 季卡 ¥79.9（90天，省 9.8）
+3. 年卡 ¥199（365天，省 159.8）
+
+请输入选项编号：`,
+            needsInput: true,
+            context: {
+              action: 'purchase-plan',
+              skillName,
+              giteeUrl
+            }
+          };
+        }
+
+        if (input === '3') {
+          return {
+            response: `JarvisMolt 飞书技能 — 让 AI 成为你的飞书智能副驾
+
+功能：智能搜索文档、知识库浏览、日程管理、AI 周报生成等。
+
+了解更多：https://gitee.com/bobsharon/JarvisMolt-Skills
+
+准备好了？回复 1 输入授权码，或回复 2 在线购买。`,
+            needsInput: true,
+            context: {
+              action: 'learn-choice',
+              skillName,
+              giteeUrl
+            }
+          };
+        }
+
+        // 默认当作授权码输入（选项 1 或直接输入码）
+        const licenseCode = (input === '1') ? '' : input;
+        if (!licenseCode || licenseCode === '1') {
+          return {
+            response: `请输入授权码：（格式：XXXX-XXXX-XXXX-XXXX-XX）`,
+            needsInput: true,
+            context: {
+              action: 'verify-license',
+              skillName,
+              giteeUrl
+            }
+          };
+        }
+
+        // 直接验证输入的码
+        parsed.action = 'verify-license';
+        // fall through to verify-license handled below
+      }
+      // falls through
 
       case 'verify-license': {
         const { skillName, giteeUrl } = parsed;
@@ -490,6 +575,89 @@ ${result.message || ''}
 现在你可以使用该技能了！`,
           success: true
         };
+      }
+
+      case 'purchase-plan': {
+        const { skillName, giteeUrl } = parsed;
+        const planIndex = parseInt(message.trim(), 10);
+        const plans = ['monthly', 'quarterly', 'yearly'];
+        const planKey = plans[planIndex - 1];
+
+        if (!planKey) {
+          return {
+            response: '无效的选项，请输入 1、2 或 3。',
+            needsInput: true,
+            context: { action: 'purchase-plan', skillName, giteeUrl }
+          };
+        }
+
+        console.log(`\n💳 创建订单: ${planKey} for ${skillName}`);
+
+        try {
+          const resp = await makePaymentRequest('/create-order', { skill: skillName, plan: planKey });
+          if (!resp.success) {
+            return { response: `创建订单失败：${resp.error || '未知错误'}`, success: false };
+          }
+
+          console.log(`🔗 支付链接: ${resp.payUrl}`);
+
+          // 尝试打开浏览器
+          try {
+            const { execFileSync } = require('child_process');
+            if (process.platform === 'darwin') execFileSync('open', [resp.payUrl]);
+            else if (process.platform === 'win32') execFileSync('cmd', ['/c', 'start', '', resp.payUrl]);
+          } catch (_) { /* ignore */ }
+
+          console.log('\n⏳ 等待支付完成...');
+
+          // 轮询
+          const orderId = resp.orderId;
+          const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+          for (let i = 0; i < 90; i++) {
+            await sleep(2000);
+            try {
+              const poll = await makePaymentRequest('/poll-order', { orderId });
+              if (poll.status === 'paid' && poll.licenseCode) {
+                console.log(`✅ 支付成功，授权码: ${poll.licenseCode}`);
+
+                // 自动激活
+                const activateResult = await verifyLicenseCode(skillName, poll.licenseCode);
+                if (activateResult.valid) {
+                  cacheLicense(skillName, activateResult.license);
+                  const tarGzFile = await downloadSkillFromAPI(activateResult.downloadUrl);
+                  const targetDir = await installSkill(tarGzFile, skillName);
+
+                  return {
+                    response: `✅ 支付成功！授权码：${poll.licenseCode}
+
+✅ 激活成功，技能已安装。
+
+安装位置: ${targetDir}
+
+现在你可以使用该技能了！`,
+                    success: true
+                  };
+                }
+
+                return {
+                  response: `✅ 支付成功！授权码：${poll.licenseCode}\n\n⚠️ 自动激活失败，请手动输入授权码重试。`,
+                  success: false
+                };
+              }
+              if (poll.status === 'failed') {
+                return { response: '支付失败，请重试。', success: false };
+              }
+            } catch (_) { /* continue polling */ }
+          }
+
+          return {
+            response: `⏰ 等待支付超时。\n\n如果您已完成支付，请使用授权码手动激活。\n订单号：${orderId}`,
+            success: false
+          };
+        } catch (err) {
+          return { response: `创建订单出错：${err.message}`, success: false };
+        }
       }
 
       case 'list-licenses': {

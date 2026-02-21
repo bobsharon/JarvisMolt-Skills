@@ -147,16 +147,10 @@ main() {
   done
   ui_success "文件就位"
 
-  # npm install（自动配置淘宝镜像）
+  # npm install（使用淘宝镜像加速，不修改全局配置）
   ui_info "安装 npm 依赖..."
-  local current_registry
-  current_registry=$(npm config get registry 2>/dev/null || echo "")
-  if [ "$current_registry" != "$TAOBAO_REGISTRY" ] && [ "$current_registry" != "${TAOBAO_REGISTRY}/" ]; then
-    ui_info "配置 npm 淘宝镜像以加速下载..."
-    npm config set registry "$TAOBAO_REGISTRY" 2>/dev/null || true
-  fi
 
-  (cd "$INSTALL_DIR" && npm install --production --no-fund --no-audit 2>&1) | while IFS= read -r line; do
+  (cd "$INSTALL_DIR" && npm install --production --no-fund --no-audit --registry "$TAOBAO_REGISTRY" 2>&1) | while IFS= read -r line; do
     printf "  ${DIM}%s${RESET}\n" "$line"
   done
   ui_success "依赖安装完成"
