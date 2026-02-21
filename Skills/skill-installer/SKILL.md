@@ -78,7 +78,7 @@ node {baseDir}/agent.js check <skillName>
    - 成功 → 继续
 5. 运行 `install` 下载安装（使用 verify 返回的 downloadUrl）
    - 失败 → 展示错误
-   - 成功 → 告诉用户安装完成，提示执行 `openclaw daemon restart` 加载新技能
+   - 成功 → 自动执行 `openclaw daemon restart` 重载技能，完成后告诉用户安装成功、技能已生效
 
 ### 查看授权：用户说 "查看我的技能授权"
 
@@ -90,6 +90,7 @@ node {baseDir}/agent.js check <skillName>
 2. 运行 `verify` 验证
 3. 运行 `remove` 移除旧版
 4. 运行 `install` 安装新版（使用 verify 返回的 downloadUrl）
+5. 自动执行 `openclaw daemon restart` 重载技能
 
 ### 移除技能：用户说 "移除\<技能名\>技能"
 
