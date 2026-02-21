@@ -102,7 +102,7 @@ function makeApiRequest(data) {
 
 /* PLACEHOLDER_CORE_FUNCTIONS */
 
-function cacheLicense(skillName, license) {
+function cacheLicense(skillName, license, downloadUrl) {
   const licensesDir = path.join(os.homedir(), '.openclaw', 'licenses');
   if (!fs.existsSync(licensesDir)) {
     fs.mkdirSync(licensesDir, { recursive: true, mode: 0o700 });
@@ -116,7 +116,8 @@ function cacheLicense(skillName, license) {
     activatedAt: Date.now(),
     expiresAt: license.expiresAt,
     type: license.type,
-    tier: license.tier || 'standard'
+    tier: license.tier || 'standard',
+    downloadUrl: downloadUrl || null
   };
   fs.writeFileSync(licensePath, JSON.stringify(cacheData, null, 2), { mode: 0o600 });
   console.error(`✓ 授权信息已缓存到: ${licensePath}`);
@@ -273,7 +274,7 @@ function checkCachedLicense(skillName) {
   if (license.expiresAt && license.expiresAt < Date.now()) {
     return { valid: false, error: '授权已过期', license };
   }
-  return { valid: true, license };
+  return { valid: true, license, downloadUrl: license.downloadUrl || null };
 }
 
 function removeSkill(skillName) {
@@ -305,7 +306,7 @@ async function main() {
         }
         const result = await verifyLicenseCode(skillName, licenseCode);
         if (result.valid && result.license) {
-          cacheLicense(skillName, { ...result.license, code: licenseCode });
+          cacheLicense(skillName, { ...result.license, code: licenseCode }, result.downloadUrl);
         }
         console.log(JSON.stringify(result));
         break;

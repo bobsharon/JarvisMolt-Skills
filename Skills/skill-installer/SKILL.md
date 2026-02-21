@@ -63,7 +63,7 @@ node {baseDir}/agent.js remove <skillName>
 node {baseDir}/agent.js check <skillName>
 ```
 
-返回: `{"valid":true,"license":{...}}` 或 `{"valid":false,"error":"..."}`
+返回: `{"valid":true,"license":{...},"downloadUrl":"..."}` 或 `{"valid":false,"error":"..."}`
 
 ## 工作流
 
@@ -72,7 +72,7 @@ node {baseDir}/agent.js check <skillName>
 1. 解析技能名（飞书→lark，其他中文名按映射转换）
 2. 先运行 `check` 检查本地是否有有效授权缓存
    - 如果有效且技能已安装（`~/.openclaw/skills/<skillName>` 目录存在）→ 告诉用户技能已安装，无需重复操作
-   - 如果有效但技能未安装 → 跳到步骤 4 用缓存的授权信息重新安装
+   - 如果有效但技能未安装 → 使用缓存中的 `downloadUrl` 直接运行 `install` 重新安装（跳到步骤 5）
 3. 问用户输入授权码（格式：XXXX-XXXX-XXXX-XXXX-XX）
 4. 运行 `verify` 验证授权码
    - 失败 → 展示错误，建议检查授权码或联系提供者
