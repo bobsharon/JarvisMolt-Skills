@@ -100,7 +100,33 @@ function makeApiRequest(data) {
 // 核心功能函数
 // ======================================
 
-/* PLACEHOLDER_CORE_FUNCTIONS */
+function parseUserInput(message) {
+  message = message.trim();
+
+  const learnMatch = message.match(/从\s*(https?:\/\/[^\s,]+)[,，]?\s*学习\s*(.+?)\s*技能/i);
+  if (learnMatch) {
+    const skillNameChinese = learnMatch[2].trim();
+    const skillNameMap = { '飞书': 'lark', '飞书技能': 'lark' };
+    const skillName = skillNameMap[skillNameChinese] || skillNameChinese;
+    return { action: 'learn', skillName, giteeUrl: learnMatch[1].replace(/[,，]+$/, '') };
+  }
+
+  if (message.match(/查看.*技能授权/i)) {
+    return { action: 'list-licenses' };
+  }
+
+  const updateMatch = message.match(/更新\s*(\w+)\s*技能/i);
+  if (updateMatch) {
+    return { action: 'update', skillName: updateMatch[1] };
+  }
+
+  const removeMatch = message.match(/移除\s*(\w+)\s*技能/i);
+  if (removeMatch) {
+    return { action: 'remove', skillName: removeMatch[1] };
+  }
+
+  return { action: 'unknown' };
+}
 
 function cacheLicense(skillName, license, downloadUrl) {
   const licensesDir = path.join(os.homedir(), '.openclaw', 'licenses');
@@ -289,6 +315,90 @@ function removeSkill(skillName) {
 }
 
 // ======================================
+// Agent 回调接口（供集成调用）
+// ======================================
+
+async function skillInstallerAgent({ message, tools, previousContext }) {
+  try {
+    // 如果有上下文，处理多轮对话
+    if (previousContext && previousContext.action === 'verify-license') {
+      const code = message.trim();
+      const { skillName, giteeUrl } = previousContext;
+      const result = await verifyLicenseCode(skillName, code);
+
+      if (!result.valid) {
+        return { response: `验证失败: ${result.error || '授权码无效'}`, success: false };
+      }
+
+      cacheLicense(skillName, { ...result.license, code }, result.downloadUrl);
+
+      if (result.downloadUrl) {
+        try {
+          const tmpFile = await downloadSkillFromAPI(result.downloadUrl);
+          const installDir = await installSkill(tmpFile, skillName);
+          return { response: `✓ ${skillName} 技能已安装到 ${installDir}`, success: true };
+        } catch (err) {
+          return { response: `授权成功，但下载失败: ${err.message}`, success: true };
+        }
+      }
+      return { response: `✓ ${skillName} 授权验证成功`, success: true };
+    }
+
+    const parsed = parseUserInput(message);
+
+    switch (parsed.action) {
+      case 'learn':
+        return {
+          response: `请输入 ${parsed.skillName} 技能的授权码:`,
+          needsInput: true,
+          context: { action: 'verify-license', skillName: parsed.skillName, giteeUrl: parsed.giteeUrl }
+        };
+
+      case 'list-licenses': {
+        const skills = listAuthorizedSkills();
+        if (skills.length === 0) {
+          return { response: '当前没有已授权的技能。' };
+        }
+        const lines = skills.map(s => `- ${s.skillName} (${s.status}, 剩余 ${s.daysRemaining} 天)`);
+        return { response: `已授权技能:\n${lines.join('\n')}` };
+      }
+
+      case 'update': {
+        const skillDir = path.join(os.homedir(), '.openclaw', 'skills', parsed.skillName);
+        if (!fs.existsSync(skillDir)) {
+          return { response: `${parsed.skillName} 尚未安装，无法更新。` };
+        }
+        const cached = checkCachedLicense(parsed.skillName);
+        if (!cached.valid) {
+          return { response: `${parsed.skillName} 授权无效: ${cached.error}` };
+        }
+        if (cached.downloadUrl) {
+          const tmpFile = await downloadSkillFromAPI(cached.downloadUrl);
+          const installDir = await installSkill(tmpFile, parsed.skillName);
+          return { response: `✓ ${parsed.skillName} 已更新到 ${installDir}` };
+        }
+        return { response: `${parsed.skillName} 没有可用的下载地址。` };
+      }
+
+      case 'remove': {
+        const result = removeSkill(parsed.skillName);
+        if (result.success) {
+          return { response: `✓ ${parsed.skillName} 已移除` };
+        }
+        return { response: `${parsed.skillName} 未安装` };
+      }
+
+      default:
+        return {
+          response: 'Skill Installer 使用方法:\n- 从 <URL> 学习 <技能名> 技能\n- 查看我的技能授权\n- 更新 <技能名> 技能\n- 移除 <技能名> 技能'
+        };
+    }
+  } catch (error) {
+    return { response: `操作失败: ${error.message}`, success: false };
+  }
+}
+
+// ======================================
 // CLI 入口
 // ======================================
 
@@ -358,4 +468,9 @@ async function main() {
   }
 }
 
-main();
+if (require.main === module) {
+  main();
+}
+
+module.exports = skillInstallerAgent;
+module.exports.checkCachedLicense = checkCachedLicense;
