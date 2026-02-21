@@ -74,10 +74,10 @@ node {baseDir}/agent.js check <skillName>
    - 如果有效且技能已安装（`~/.openclaw/skills/<skillName>` 目录存在）→ 告诉用户技能已安装，无需重复操作
    - 如果有效但技能未安装 → 使用缓存中的 `downloadUrl` 直接运行 `install` 重新安装（跳到步骤 5）
 3. 问用户输入授权码（格式：XXXX-XXXX-XXXX-XXXX-XX）
-4. 运行 `verify` 验证授权码
+4. 告诉用户「⏳ 正在验证授权码...」，然后运行 `verify` 验证授权码
    - 失败 → 展示错误，建议检查授权码或联系提供者
-   - 成功 → 继续
-5. 运行 `install` 下载安装（使用 verify 返回的 downloadUrl）
+   - 成功 → 告诉用户「✅ 授权验证通过」，继续
+5. 告诉用户「⏳ 正在下载安装技能包，请稍候...」，然后运行 `install` 下载安装（使用 verify 返回的 downloadUrl）
    - 失败 → 展示错误
    - 成功 → 执行以下 post-install 流程：
      1. 告诉用户安装完成
