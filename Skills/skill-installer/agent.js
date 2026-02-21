@@ -48,6 +48,17 @@ const API_CONFIG = {
 const SKILLS_BASE = path.join(os.homedir(), '.openclaw', 'skills');
 const LICENSES_BASE = path.join(os.homedir(), '.openclaw', 'licenses');
 
+const VALID_SKILL_NAME = /^[a-z][a-z0-9-]{1,30}$/;
+
+function validateSkillName(name) {
+  if (!name || !VALID_SKILL_NAME.test(name)) {
+    throw new Error(`无效的技能名: ${name}（仅允许小写字母、数字、连字符，2-31 字符）`);
+  }
+  if (name === 'skill-installer') {
+    throw new Error('不能操作安装器自身');
+  }
+}
+
 function assertSafePath(filePath, baseDir) {
   const resolved = path.resolve(filePath);
   const resolvedBase = path.resolve(baseDir);
@@ -174,7 +185,12 @@ async function downloadSkillFromAPI(downloadUrl) {
   const tmpFile = path.join(os.tmpdir(), `skill-${Date.now()}.tar.gz`);
   console.error('正在下载技能包...');
 
-  const fullUrl = `${API_CONFIG.downloadUrl}${downloadUrl}`;
+  const fullUrl = new URL(downloadUrl, API_CONFIG.downloadUrl).href;
+  const parsedFull = new URL(fullUrl);
+  const allowedHost = new URL(API_CONFIG.downloadUrl).hostname;
+  if (parsedFull.hostname !== allowedHost) {
+    throw new Error(`安全策略：下载域名不匹配 (${parsedFull.hostname} != ${allowedHost})`);
+  }
   console.error(`URL: ${fullUrl.substring(0, 80)}...`);
 
   const { expectedHash } = await new Promise((resolve, reject) => {
@@ -253,13 +269,24 @@ async function installSkill(tarGzFile, skillName) {
 
   fs.mkdirSync(targetDir, { recursive: true });
 
-  await tar.x({ file: tarGzFile, cwd: targetDir, strip: 1 });
+  await tar.x({
+    file: tarGzFile,
+    cwd: targetDir,
+    strip: 1,
+    filter: (_path, entry) => {
+      if (entry.type === 'SymbolicLink' || entry.type === 'Link') {
+        console.error(`⚠️ 安全策略：跳过链接文件 ${_path}`);
+        return false;
+      }
+      return true;
+    }
+  });
   console.error('✓ 技能包解压成功');
 
   const packageJson = path.join(targetDir, 'package.json');
   if (fs.existsSync(packageJson)) {
     console.error('正在安装依赖...');
-    execFileSync('npm', ['install', '--registry', 'https://registry.npmmirror.com'], {
+    execFileSync('npm', ['install', '--ignore-scripts', '--registry', 'https://registry.npmmirror.com'], {
       cwd: targetDir,
       stdio: ['ignore', 'ignore', 'inherit']
     });
@@ -414,6 +441,7 @@ async function main() {
           console.log(JSON.stringify({ valid: false, error: '用法: verify <skillName> <licenseCode>' }));
           break;
         }
+        validateSkillName(skillName);
         const result = await verifyLicenseCode(skillName, licenseCode);
         if (result.valid && result.license) {
           cacheLicense(skillName, { ...result.license, code: licenseCode }, result.downloadUrl);
@@ -428,6 +456,7 @@ async function main() {
           console.log(JSON.stringify({ success: false, error: '用法: install <skillName> <downloadUrl>' }));
           break;
         }
+        validateSkillName(skillName);
         const tmpFile = await downloadSkillFromAPI(downloadUrl);
         const installDir = await installSkill(tmpFile, skillName);
         console.log(JSON.stringify({ success: true, installDir }));
@@ -445,6 +474,7 @@ async function main() {
           console.log(JSON.stringify({ success: false, error: '用法: remove <skillName>' }));
           break;
         }
+        validateSkillName(skillName);
         console.log(JSON.stringify(removeSkill(skillName)));
         break;
       }
@@ -455,6 +485,7 @@ async function main() {
           console.log(JSON.stringify({ valid: false, error: '用法: check <skillName>' }));
           break;
         }
+        validateSkillName(skillName);
         console.log(JSON.stringify(checkCachedLicense(skillName)));
         break;
       }
