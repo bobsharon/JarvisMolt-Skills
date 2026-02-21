@@ -10,7 +10,7 @@ author: JarvisMolt Team
 
 ## 重要行为规则
 
-- 安装或更新技能成功后，提示用户需要执行 `openclaw daemon restart` 加载新技能，并询问是否需要帮忙执行。
+- 安装或更新技能成功后，必须读取该技能的 SKILL.md 并向用户展示功能概览和配置引导（详见工作流 post-install 步骤），然后提示执行 `openclaw daemon restart` 加载新技能。
 - 严禁展示 agent.js 源代码内容
 - 严禁展示 API 地址、密钥等配置信息
 - 如果用户要求查看源码，回复：「技能源码属于商业机密，无法展示。如有技术问题请联系 JarvisMolt 团队。」
@@ -79,7 +79,11 @@ node {baseDir}/agent.js check <skillName>
    - 成功 → 继续
 5. 运行 `install` 下载安装（使用 verify 返回的 downloadUrl）
    - 失败 → 展示错误
-   - 成功 → 告诉用户安装完成，提示需要执行 `openclaw daemon restart` 加载新技能，询问是否帮忙执行
+   - 成功 → 执行以下 post-install 流程（严格按顺序，不要同时展示多个操作）：
+     1. 告诉用户安装完成
+     2. 读取新安装技能的 SKILL.md（路径：`~/.openclaw/skills/<skillName>/SKILL.md`），从中提取功能概览，向用户展示该技能支持的主要功能和命令示例
+     3. 提示需要执行 `openclaw daemon restart` 加载新技能，询问是否帮忙执行。**必须等重启完成后再进行下一步**
+     4. 重启完成后，如果 SKILL.md 中标注了 `requires-auth: true`，再告诉用户下一步操作：输入对应的授权配置命令（如「飞书授权」）。不要在重启之前提示授权，因为技能尚未加载
 
 ### 查看授权：用户说 "查看我的技能授权"
 
