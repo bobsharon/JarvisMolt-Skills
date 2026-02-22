@@ -28,6 +28,8 @@ const tar = require('tar');
 const MAX_REDIRECTS = 5;
 const MIN_VALID_PACKAGE_SIZE = 1000;
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
+const LOCKOUT_MAX_FAILURES = 5;
+const LOCKOUT_DURATION_MS = 15 * 60 * 1000; // 15 minutes
 
 // ======================================
 // API 配置
@@ -70,6 +72,7 @@ function getApiConfig() {
 
 const SKILLS_BASE = path.join(os.homedir(), '.openclaw', 'skills');
 const LICENSES_BASE = path.join(os.homedir(), '.openclaw', 'licenses');
+const LOCKOUT_FILE = path.join(LICENSES_BASE, '.rate-limit-lockout.json');
 
 const VALID_SKILL_NAME = /^[a-z][a-z0-9-]{1,30}$/;
 
@@ -88,6 +91,62 @@ function assertSafePath(filePath, baseDir) {
   if (resolved !== resolvedBase && !resolved.startsWith(resolvedBase + path.sep)) {
     throw new Error(`路径越界: ${resolved}`);
   }
+}
+
+// ======================================
+// 验证频率限制 (Rate Limiting)
+// ======================================
+
+function readLockout() {
+  try {
+    if (fs.existsSync(LOCKOUT_FILE)) {
+      return JSON.parse(fs.readFileSync(LOCKOUT_FILE, 'utf8'));
+    }
+  } catch (_) {}
+  return { failures: 0, lockedUntil: null };
+}
+
+function writeLockout(data) {
+  if (!fs.existsSync(LICENSES_BASE)) {
+    fs.mkdirSync(LICENSES_BASE, { recursive: true, mode: 0o700 });
+  }
+  fs.writeFileSync(LOCKOUT_FILE, JSON.stringify(data, null, 2), { mode: 0o600 });
+}
+
+function checkLockout() {
+  const lockout = readLockout();
+
+  if (lockout.lockedUntil) {
+    const lockedUntil = new Date(lockout.lockedUntil);
+    const now = new Date();
+    if (lockedUntil > now) {
+      const remainMs = lockedUntil.getTime() - now.getTime();
+      const remainMin = Math.ceil(remainMs / 60000);
+      return { locked: true, error: `验证失败次数过多，请在 ${remainMin} 分钟后重试` };
+    }
+    // Lock expired — reset
+    writeLockout({ failures: 0, lockedUntil: null });
+    return { locked: false };
+  }
+
+  if (lockout.failures >= LOCKOUT_MAX_FAILURES) {
+    const lockedUntil = new Date(Date.now() + LOCKOUT_DURATION_MS).toISOString();
+    writeLockout({ failures: lockout.failures, lockedUntil });
+    const remainMin = Math.ceil(LOCKOUT_DURATION_MS / 60000);
+    return { locked: true, error: `验证失败次数过多，请在 ${remainMin} 分钟后重试` };
+  }
+
+  return { locked: false };
+}
+
+function recordVerifyFailure() {
+  const lockout = readLockout();
+  lockout.failures += 1;
+  writeLockout(lockout);
+}
+
+function resetLockout() {
+  writeLockout({ failures: 0, lockedUntil: null });
 }
 
 // ======================================
@@ -467,9 +526,20 @@ async function main() {
           break;
         }
         validateSkillName(skillName);
+
+        // Rate-limit check
+        const lockoutStatus = checkLockout();
+        if (lockoutStatus.locked) {
+          console.log(JSON.stringify({ success: false, error: lockoutStatus.error }));
+          break;
+        }
+
         const result = await verifyLicenseCode(skillName, licenseCode);
         if (result.valid && result.license) {
+          resetLockout();
           cacheLicense(skillName, { ...result.license, code: licenseCode }, result.downloadUrl);
+        } else {
+          recordVerifyFailure();
         }
         console.log(JSON.stringify(result));
         break;
@@ -530,3 +600,11 @@ if (require.main === module) {
 
 module.exports = skillInstallerAgent;
 module.exports.checkCachedLicense = checkCachedLicense;
+module.exports.readLockout = readLockout;
+module.exports.writeLockout = writeLockout;
+module.exports.checkLockout = checkLockout;
+module.exports.recordVerifyFailure = recordVerifyFailure;
+module.exports.resetLockout = resetLockout;
+module.exports.LOCKOUT_FILE = LOCKOUT_FILE;
+module.exports.LOCKOUT_MAX_FAILURES = LOCKOUT_MAX_FAILURES;
+module.exports.LOCKOUT_DURATION_MS = LOCKOUT_DURATION_MS;
