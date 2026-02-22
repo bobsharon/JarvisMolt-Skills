@@ -33,13 +33,36 @@ const MS_PER_DAY = 24 * 60 * 60 * 1000;
 // API 配置
 // ======================================
 
-const _k = [115,107,45,106,97,114,118,105,115,109,111,108,116,45,50,48,50,54,45,49,51,54,55,98,56,98,98,101,97,99,49,56,48,51,101];
+// Security: API credentials and endpoints MUST be provided via environment variables.
+// Never hardcode API keys or server URLs in distributed packages.
+// Set these in ~/.openclaw/env or via the installer bootstrap process.
 
-const API_CONFIG = {
-  url: process.env.JARVISMOLT_API_URL || 'https://verify-ffigtcrsdv.cn-shanghai.fcapp.run',
-  downloadUrl: process.env.JARVISMOLT_DOWNLOAD_URL || 'https://download-vjckfoskbb.cn-shanghai.fcapp.run',
-  apiKey: process.env.JARVISMOLT_API_KEY || String.fromCharCode(..._k)
-};
+function loadApiConfig() {
+  const url = process.env.JARVISMOLT_API_URL;
+  const downloadUrl = process.env.JARVISMOLT_DOWNLOAD_URL;
+  const apiKey = process.env.JARVISMOLT_API_KEY;
+
+  const missing = [];
+  if (!url) missing.push('JARVISMOLT_API_URL');
+  if (!downloadUrl) missing.push('JARVISMOLT_DOWNLOAD_URL');
+  if (!apiKey) missing.push('JARVISMOLT_API_KEY');
+
+  if (missing.length > 0) {
+    throw new Error(
+      `缺少必要的环境变量: ${missing.join(', ')}。` +
+      `请运行 openclaw skill-installer setup 或手动配置 ~/.openclaw/env`
+    );
+  }
+
+  return { url, downloadUrl, apiKey };
+}
+
+// Lazy-loaded: only accessed when API calls are actually made
+let _apiConfig = null;
+function getApiConfig() {
+  if (!_apiConfig) _apiConfig = loadApiConfig();
+  return _apiConfig;
+}
 
 // ======================================
 // 路径安全校验
@@ -73,7 +96,8 @@ function assertSafePath(filePath, baseDir) {
 
 function makeApiRequest(data) {
   return new Promise((resolve, reject) => {
-    const url = new URL(API_CONFIG.url);
+    const config = getApiConfig();
+    const url = new URL(config.url);
 
     const options = {
       hostname: url.hostname,
@@ -82,7 +106,7 @@ function makeApiRequest(data) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-API-Key': API_CONFIG.apiKey
+        'X-API-Key': config.apiKey
       }
     };
 
@@ -185,9 +209,10 @@ async function downloadSkillFromAPI(downloadUrl) {
   const tmpFile = path.join(os.tmpdir(), `skill-${Date.now()}.tar.gz`);
   console.error('正在下载技能包...');
 
-  const fullUrl = new URL(downloadUrl, API_CONFIG.downloadUrl).href;
+  const config = getApiConfig();
+  const fullUrl = new URL(downloadUrl, config.downloadUrl).href;
   const parsedFull = new URL(fullUrl);
-  const allowedHost = new URL(API_CONFIG.downloadUrl).hostname;
+  const allowedHost = new URL(config.downloadUrl).hostname;
   if (parsedFull.hostname !== allowedHost) {
     throw new Error(`安全策略：下载域名不匹配 (${parsedFull.hostname} != ${allowedHost})`);
   }

@@ -12,6 +12,11 @@ const https = require('https');
 const LICENSES_BASE = path.join(os.homedir(), '.openclaw', 'licenses');
 const SKILLS_BASE = path.join(os.homedir(), '.openclaw', 'skills');
 
+// Set required env vars for API config (no hardcoded defaults since security fix)
+process.env.JARVISMOLT_API_URL = process.env.JARVISMOLT_API_URL || 'https://verify.test.example.com';
+process.env.JARVISMOLT_DOWNLOAD_URL = process.env.JARVISMOLT_DOWNLOAD_URL || 'https://download.test.example.com';
+process.env.JARVISMOLT_API_KEY = process.env.JARVISMOLT_API_KEY || 'test-api-key-for-integration-tests';
+
 const skillInstallerAgent = require('./agent');
 
 // Helper: mock https.request to return a given response
@@ -211,5 +216,118 @@ describe('skillInstallerAgent', () => {
     } finally {
       try { fs.rmSync(skillDir, { recursive: true, force: true }); } catch {}
     }
+  });
+});
+
+// ============== #4: 网络异常和并发测试 ==============
+
+describe('网络异常场景', () => {
+  afterEach(() => jest.restoreAllMocks());
+
+  test('连接超时 (ETIMEDOUT)', async () => {
+    jest.spyOn(https, 'request').mockImplementation((options, callback) => {
+      return {
+        on: jest.fn((event, handler) => {
+          if (event === 'error') setTimeout(() => handler(Object.assign(new Error('ETIMEDOUT'), { code: 'ETIMEDOUT' })), 0);
+        }),
+        write: jest.fn(),
+        end: jest.fn()
+      };
+    });
+
+    const result = await skillInstallerAgent({
+      message: 'TIMEOUT-CODE',
+      tools: {},
+      previousContext: { action: 'verify-license', skillName: 'lark', giteeUrl: 'https://gitee.com/test/repo' }
+    });
+    expect(result.response).toContain('失败');
+    expect(result.success).toBe(false);
+  });
+
+  test('DNS 解析失败 (ENOTFOUND)', async () => {
+    jest.spyOn(https, 'request').mockImplementation((options, callback) => {
+      return {
+        on: jest.fn((event, handler) => {
+          if (event === 'error') setTimeout(() => handler(Object.assign(new Error('ENOTFOUND'), { code: 'ENOTFOUND' })), 0);
+        }),
+        write: jest.fn(),
+        end: jest.fn()
+      };
+    });
+
+    const result = await skillInstallerAgent({
+      message: 'DNS-FAIL-CODE',
+      tools: {},
+      previousContext: { action: 'verify-license', skillName: 'lark', giteeUrl: 'https://gitee.com/test/repo' }
+    });
+    expect(result.response).toContain('失败');
+    expect(result.success).toBe(false);
+  });
+
+  test('服务端 500 错误', async () => {
+    mockHttps({ success: false, error: 'Internal Server Error' }, 500);
+
+    const result = await skillInstallerAgent({
+      message: 'SERVER-ERROR-CODE',
+      tools: {},
+      previousContext: { action: 'verify-license', skillName: 'lark', giteeUrl: 'https://gitee.com/test/repo' }
+    });
+    expect(result.response).toContain('失败');
+    expect(result.success).toBe(false);
+  });
+
+  test('响应体为非 JSON', async () => {
+    jest.spyOn(https, 'request').mockImplementation((options, callback) => {
+      const mockRes = {
+        statusCode: 200,
+        headers: {},
+        on: jest.fn((event, handler) => {
+          if (event === 'data') handler('not-json-at-all');
+          if (event === 'end') handler();
+        })
+      };
+      if (callback) callback(mockRes);
+      return { on: jest.fn(), write: jest.fn(), end: jest.fn() };
+    });
+
+    const result = await skillInstallerAgent({
+      message: 'BAD-JSON-CODE',
+      tools: {},
+      previousContext: { action: 'verify-license', skillName: 'lark', giteeUrl: 'https://gitee.com/test/repo' }
+    });
+    expect(result.response).toContain('失败');
+    expect(result.success).toBe(false);
+  });
+});
+
+describe('并发安装场景', () => {
+  afterEach(() => jest.restoreAllMocks());
+
+  test('并发 learn 请求不会互相干扰', async () => {
+    const results = await Promise.all([
+      skillInstallerAgent({ message: '从 https://gitee.com/test/lark 学习 lark 技能', tools: {} }),
+      skillInstallerAgent({ message: '从 https://gitee.com/test/feishu 学习 feishu 技能', tools: {} }),
+      skillInstallerAgent({ message: '从 https://gitee.com/test/dingtalk 学习 dingtalk 技能', tools: {} }),
+    ]);
+
+    results.forEach(r => {
+      expect(r.needsInput).toBe(true);
+      expect(r.response).toContain('授权码');
+    });
+
+    const skillNames = results.map(r => r.context.skillName);
+    expect(new Set(skillNames).size).toBe(3);
+  });
+
+  test('并发 list 请求不会冲突', async () => {
+    const results = await Promise.all([
+      skillInstallerAgent({ message: '查看我的技能授权', tools: {} }),
+      skillInstallerAgent({ message: '查看我的技能授权', tools: {} }),
+    ]);
+
+    results.forEach(r => {
+      expect(r.response).toBeDefined();
+      expect(typeof r.response).toBe('string');
+    });
   });
 });

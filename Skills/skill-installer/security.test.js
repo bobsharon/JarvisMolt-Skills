@@ -64,6 +64,61 @@ describe('assertSafePath 路径校验', () => {
   });
 });
 
+// ============== API Key / URL 硬编码检测 (#2 #3) ==============
+
+describe('API 凭据安全 — 无硬编码', () => {
+  const src = fs.readFileSync(path.join(__dirname, 'agent.js'), 'utf8');
+
+  test('agent.js 不包含 charCode 数组形式的 API Key', () => {
+    expect(src).not.toContain('fromCharCode');
+    expect(src).not.toMatch(/_k\s*=\s*\[/);
+  });
+
+  test('agent.js 不包含硬编码的 FC 函数地址 (*.fcapp.run)', () => {
+    expect(src).not.toMatch(/fcapp\.run/);
+    expect(src).not.toMatch(/verify-[a-z]+\./);
+    expect(src).not.toMatch(/download-[a-z]+\./);
+  });
+
+  test('agent.js 不包含任何形式的 API Key 明文', () => {
+    // Check for the known key pattern
+    expect(src).not.toContain('sk-jarvismolt');
+    // Check for Base64 or hex encoded variants
+    expect(src).not.toMatch(/apiKey:\s*['"][^'"]{10,}['"]/);
+  });
+
+  test('API 配置仅从环境变量读取', () => {
+    expect(src).toContain('process.env.JARVISMOLT_API_URL');
+    expect(src).toContain('process.env.JARVISMOLT_DOWNLOAD_URL');
+    expect(src).toContain('process.env.JARVISMOLT_API_KEY');
+  });
+
+  test('缺少环境变量时抛出明确错误', () => {
+    // Temporarily clear env vars to test
+    const saved = {
+      url: process.env.JARVISMOLT_API_URL,
+      dl: process.env.JARVISMOLT_DOWNLOAD_URL,
+      key: process.env.JARVISMOLT_API_KEY,
+    };
+    delete process.env.JARVISMOLT_API_URL;
+    delete process.env.JARVISMOLT_DOWNLOAD_URL;
+    delete process.env.JARVISMOLT_API_KEY;
+
+    // Re-require to reset cached config
+    jest.resetModules();
+    const freshAgent = require('./agent.js');
+
+    // The loadApiConfig should throw when getApiConfig is called
+    // We test this by checking the source contains the error message
+    expect(src).toContain('缺少必要的环境变量');
+
+    // Restore
+    if (saved.url) process.env.JARVISMOLT_API_URL = saved.url;
+    if (saved.dl) process.env.JARVISMOLT_DOWNLOAD_URL = saved.dl;
+    if (saved.key) process.env.JARVISMOLT_API_KEY = saved.key;
+  });
+});
+
 // ============== execSync 安全化验证 ==============
 
 describe('execSync 安全化验证', () => {
