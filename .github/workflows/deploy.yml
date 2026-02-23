@@ -1,0 +1,93 @@
+# CI/CD — 发布 (test → package → Gitee Release → update install.sh)
+# 触发: push tag v* / 手动 workflow_dispatch
+#
+# 需要的 GitHub Secrets:
+#   - GITEE_TOKEN: Gitee API personal access token
+
+name: Deploy
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write  # push 回 main 更新 install.sh
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: Skills/skill-installer/package-lock.json
+
+      # ─── Test ───────────────────────────────────────────────
+
+      - name: Install dependencies
+        run: cd Skills/skill-installer && npm ci
+
+      - name: Run tests
+        run: cd Skills/skill-installer && npx jest --verbose --forceExit
+
+      # ─── Pre-release checks ────────────────────────────────
+
+      - name: Version check
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          TAG_VER="${GITHUB_REF#refs/tags/v}"
+          PKG_VER=$(node -p "require('./Skills/skill-installer/package.json').version")
+          if [ "$TAG_VER" != "$PKG_VER" ]; then
+            echo "❌ Tag v${TAG_VER} != package.json ${PKG_VER}"
+            exit 1
+          fi
+          make version-check
+
+      - name: Security scan
+        run: make lint-secrets
+
+      # ─── Package ────────────────────────────────────────────
+
+      - name: Package tarball
+        run: |
+          cd Skills
+          tar czf skill-installer.tar.gz \
+            --exclude='test' --exclude='coverage' --exclude='.env' \
+            --exclude='*.log' --exclude='package-lock.json' --exclude='.git*' \
+            --exclude='*.test.js' --exclude='.DS_Store' \
+            skill-installer
+
+      # ─── Gitee Release ─────────────────────────────────────
+
+      - name: Create Gitee Release
+        env:
+          GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
+        run: |
+          VERSION="${GITHUB_REF#refs/tags/v}"
+          # 创建 release
+          RESP=$(curl -sf -X POST "https://gitee.com/api/v5/repos/bobsharon/JarvisMolt-Skills/releases" \
+            -H "Content-Type: application/json" \
+            -d "{\"access_token\":\"${GITEE_TOKEN}\",\"tag_name\":\"v${VERSION}\",\"name\":\"skill-installer v${VERSION}\",\"body\":\"自动发布 v${VERSION}\"}")
+          RELEASE_ID=$(echo "$RESP" | node -p "JSON.parse(require('fs').readFileSync(0,'utf8')).id")
+          echo "Release ID: ${RELEASE_ID}"
+          # 上传 tar.gz
+          curl -sf -X POST "https://gitee.com/api/v5/repos/bobsharon/JarvisMolt-Skills/releases/${RELEASE_ID}/attach_files" \
+            -H "Content-Type: multipart/form-data" \
+            -F "access_token=${GITEE_TOKEN}" \
+            -F "file=@Skills/skill-installer.tar.gz"
+
+      # ─── Update install.sh ─────────────────────────────────
+
+      - name: Update install.sh VERSION
+        run: |
+          VERSION="${GITHUB_REF#refs/tags/v}"
+          sed -i "s/^VERSION=\"[0-9][0-9.]*\"/VERSION=\"${VERSION}\"/" install.sh
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add install.sh
+          git diff --cached --quiet || git commit -m "chore: update install.sh VERSION to ${VERSION} [skip ci]"
+          git push origin main
