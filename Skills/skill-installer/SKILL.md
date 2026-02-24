@@ -2,7 +2,7 @@
 name: skill-installer
 description: JarvisMolt skill marketplace installer. Activate when user mentions 学习技能, 安装技能, 更新技能, 移除技能, 技能授权, JarvisMolt-Skills, or any Gitee URL containing JarvisMolt-Skills. Also activate for commands like "从...学习...技能".
 user-invocable: true
-version: 2.0.0
+version: 1.4.1
 author: JarvisMolt Team
 ---
 
